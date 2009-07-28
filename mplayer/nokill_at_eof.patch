@@ -1,0 +1,44 @@
+Index: mplayer.c
+===================================================================
+--- mplayer.c	(revision 29409)
++++ mplayer.c	(working copy)
+@@ -3689,19 +3689,26 @@
+   vo_fps=mpctx->sh_video->fps;
+ 
+   if (!mpctx->num_buffered_frames) {
+-      double frame_time = update_video(&blit_frame);
+-      mp_dbg(MSGT_AVSYNC,MSGL_DBG2,"*** ftime=%5.3f ***\n",frame_time);
+-      if (mpctx->sh_video->vf_initialized < 0) {
+-	  mp_msg(MSGT_CPLAYER,MSGL_FATAL, MSGTR_NotInitializeVOPorVO);
+-	  mpctx->eof = 1; goto goto_next_file;
+-      }
+-      if (frame_time < 0)
+-	  mpctx->eof = 1;
+-      else {
+-	  // might return with !eof && !blit_frame if !correct_pts
+-	  mpctx->num_buffered_frames += blit_frame;
+-	  time_frame += frame_time / playback_speed;  // for nosound
+-      }
++    double frame_time = update_video(&blit_frame);
++    mp_dbg(MSGT_AVSYNC,MSGL_DBG2,"*** ftime=%5.3f ***\n",frame_time);
++    if (mpctx->sh_video->vf_initialized < 0) {
++      mp_msg(MSGT_CPLAYER,MSGL_FATAL, MSGTR_NotInitializeVOPorVO);
++      mpctx->eof = 1; goto goto_next_file;
++    }
++
++    static int last_valid_pts = 0;
++    if (frame_time < 0) {
++      //=============stone-tag================
++      seek(mpctx, last_valid_pts, SEEK_ABSOLUTE);
++      pause_loop();
++      //mpctx->eof = 1;
++    }
++    else {
++      last_valid_pts = demuxer_get_current_time(mpctx->demuxer);
++      // might return with !eof && !blit_frame if !correct_pts
++      mpctx->num_buffered_frames += blit_frame;
++      time_frame += frame_time / playback_speed;  // for nosound
++    }
+   }
+ 
+ // ==========================================================================
