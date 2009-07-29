@@ -26,6 +26,7 @@ class WGet:
             self.current_file = self.in_file
         else:
             self.current_file = current_file
+        self.current_size = 0
 
         self.wget_proc = None
         self.url = urllib.urlopen(self.in_file)
@@ -42,8 +43,10 @@ class WGet:
         self.logger.addHandler(handler)
 
         # set delay between HTTP requests
-        self.delay = delay  # ms
-        self.prev_time = 0
+        self.delay_http = delay_http  # ms
+        self.delay_log = delay_log
+        self.prev_time_http = -delay_http # no delay on first run
+        self.prev_time_log = -delay_log
 
     def wget(self):
         """
@@ -79,7 +82,10 @@ class WGet:
         # time delay this request to like 5seconds per request or else it's
         # a DDOS attack
         #self.url = urllib.urlopen(self.ip_addr + self.in_file)
-        return int(self.url.info().dict['content-length'])
+        if time.time() - self.prev_time_http > self.delay_http:
+            self.current_size = int(self.url.info().dict['content-length'])
+            self.prev_time_http = time.time()
+        return self.current_size
 
     def size_current(self):
         return os.path.getsize(file.file)
@@ -88,7 +94,9 @@ class WGet:
         return float(self.size_current())/self.size_in()
 
     def log(self):
-        self.logger.debug(str(self))
+        if time.time() - self.prev_time_log > self.delay_log:
+            self.logger.debug(str(self))
+            self.prev_time_log = time.time()
 
     def __str__(self):
         s = "wget: "
