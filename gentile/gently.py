@@ -7,36 +7,102 @@ import urllib
 import logging
 import datetime
 
-LOG_FILENAME = 'gently.log'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
 
 devnull = open(os.devnull, 'w')
 
 class WGet:
-    def __init__(self, ip_addr, in_file, out_file, delay):
-        self.ip_addr = ip_addr
+    """
+    WGet is an intelligent wrapper around the wget process.
+    Allows wgetting a growing file by restarting wget if it
+    dies due to EOF. Also gives statistics of the download.
+    """
+
+    def __init__(self, in_dir, in_file, current_file=None,
+            delay_http=5000, delay_log=5000):
+
+        self.in_dir = in_dir
         self.in_file = in_file
-        self.out_file = out_file
-        self.delay = delay
-        self.url = urllib.urlopen(self.ip_addr + self.in_file)
+        if self.current_file is None:
+            self.current_file = self.in_file
+        else:
+            self.current_file = current_file
 
-        self.prev_time = 0
         self.wget_proc = None
+        self.url = urllib.urlopen(self.in_file)
 
-    def terminate(self):
-        if self.wget_proc is not None:
-            self.wget_proc.terminate()
-            self.wget_proc = None
+        # create/update output file
+        open(self.current_file, 'a').close()
+
+        # set up logging
+        LOG_FILENAME = '/var/log/stone-gently'
+        self.logger = logging.getLogger('stone-logger')
+        self.logger.setLevel(logging.DEBUG)
+        handler = logging.handlers.RotatingFileHandler(
+                      LOG_FILENAME, maxBytes=20, backupCount=5)
+        self.logger.addHandler(handler)
+
+        # set delay between HTTP requests
+        self.delay = delay  # ms
+        self.prev_time = 0
+
+    def wget(self):
+        """
+        Starts a wget process.
+        User should never call this. Call download() instead.
+        """
+        return subprocess.Popen(['wget', '-c', '-O', self.in_file,
+            self.current_file], shell=False, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
 
     def download(self):
+        """
+        Starts wget process if none existed. Do nothing otherwise.
+        """
         if self.wget_proc is None or self.wget_proc.poll() is not None:
             # wget not running
             self.wget_proc = self.wget()
+
+    def terminate(self):
+        """
+        Terminate wget process.
+        """
+        if self.wget_proc is not None:
+            self.wget_proc.terminate()
+            self.wget_proc = None
 
     def alive(self):
         if self.wget_proc is None:
             return False
         return True
+
+    def size_in(self):
+        # time delay this request to like 5seconds per request or else it's
+        # a DDOS attack
+        #self.url = urllib.urlopen(self.ip_addr + self.in_file)
+        return int(self.url.info().dict['content-length'])
+
+    def size_current(self):
+        return os.path.getsize(file.file)
+
+    def progress(self):
+        return float(self.size_current())/self.size_in()
+
+    def log(self):
+        self.logger.debug(str(self))
+
+    def __str__(self):
+        s = "wget: "
+        if self.alive():
+            s += "alive"
+        else:
+            s += "dead"
+        s += "\n"
+        s += "current size: " + self.size_current()
+        s += "\n"
+        s += "incoming size: " + self.size_in()
+        s += "\n"
+        s += "progress: {0:.2%}".format(self.progress())
+        return s
 
     def old_next(self, restart=True):
         """
@@ -48,28 +114,18 @@ class WGet:
         process:
 
         Returns True if we delete and start a new process, False otherwise.
-        """
         if time.time() - self.prev_time > self.delay:
             if self.wget_proc != None:
                 self.wget_proc.terminate()
-                logging.debug(str(datetime.date.today()) + " terminated wget.")
+                logger.debug(str(datetime.date.today()) + " terminated wget.")
             if restart:
                 self.wget_proc = self.wget()
-                logging.debug(str(datetime.date.today()) + " started wget.")
+                logger.debug(str(datetime.date.today()) + " started wget.")
             self.prev_time = time.time()
             return True
         return False
+        """
 
-    def wget(self):
-        return subprocess.Popen(['wget', '-c', self.ip_addr + self.in_file],
-                shell=False, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT)
-
-    def size(self):
-        # time delay this request to like 5seconds per request or else it's
-        # a DDOS attack
-        #self.url = urllib.urlopen(self.ip_addr + self.in_file)
-        return int(self.url.info().dict['content-length'])
 
 """
 wget = WGet('http://elbenshira.com', '/d/file.ts', '', 5)

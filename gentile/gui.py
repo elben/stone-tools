@@ -64,7 +64,7 @@ def main():
 
 
     subprocess.Popen(['touch', file.file]) # in case file does not exist
-    wget = gently.WGet(file.ip, file.file, '', 5)
+    wget = gently.WGet(file.ip+file.file)
     download_file = False
     dl_dots = 0
     c = 0
