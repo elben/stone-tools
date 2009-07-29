@@ -65,15 +65,15 @@ class WGet:
         Starts a wget process.
         User should never call this. Call download() instead.
         """
-        return subprocess.Popen(['wget', '-c', '-O', self.in_file,
-            self.current_file], shell=False, stdout=subprocess.PIPE,
+        return subprocess.Popen(['wget', '-c', self.url_in(),
+            '-O', self.current_file], shell=False, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
 
     def download(self):
         """
         Starts wget process if none existed. Do nothing otherwise.
         """
-        if self.wget_proc is None or self.wget_proc.poll() is not None:
+        if not self.alive():
             # wget not running
             self.wget_proc = self.wget()
 
@@ -81,7 +81,7 @@ class WGet:
         """
         Terminate wget process.
         """
-        if self.wget_proc is not None and self.wget_proc.poll() is None:
+        if self.alive():
             self.wget_proc.terminate()
             self.wget_proc = None
 
@@ -104,6 +104,9 @@ class WGet:
 
     def progress(self):
         return float(self.size_current())/self.size_in()
+
+    def url_in(self):
+        return self.in_dir + self.in_file
 
     def log(self):
         if time.time() - self.prev_time_log > self.delay_log:
