@@ -6,7 +6,7 @@ import os
 import urllib2
 import logging
 import logging.handlers
-import datetime
+import time
 
 
 devnull = open(os.devnull, 'w')
@@ -18,8 +18,8 @@ class WGet:
     dies due to EOF. Also gives statistics of the download.
     """
 
-    def __init__(self, in_dir, in_file, current_file=None,
-            logger=None, delay_http=5000, delay_log=5000):
+    def __init__(self, extern_dir, extern_file, local_file=None,
+            logger=None, delay_wget=1, delay_http=5, delay_log=5):
 
         # set up logging
         if logger is None:
@@ -32,50 +32,53 @@ class WGet:
         else:
             self.logger = logger
 
-        self.in_dir = in_dir
-        self.in_file = in_file
-        if current_file is None:
-            self.current_file = self.in_file
+        self.extern_dir = extern_dir
+        self.extern_file = extern_file
+        if local_file is None:
+            self.local_file = self.extern_file
         else:
-            self.current_file = current_file
-        self.current_size = 0
+            self.local_file = local_file
+        self.extern_file_size = 0
 
         self.wget_proc = None
         try:
-            self.logger.debug("Attempting to open " +
-                    self.in_dir+self.in_file+".")
-            self.url = urllib2.urlopen(self.in_dir + self.in_file, timeout=5)
+            self.logger.debug("Attempting to open " + self.url() + ".")
+            self.url = urllib2.urlopen(self.url(), timeout=5)
         except urllib2.URLError:
-            msg = "Timeout attempting to open "+self.in_dir+self.in_file+"."
+            msg = "Timeout attempting to open " + self.url() + "."
             self.logger.critical(msg)
             raise TimeoutException(msg)
 
 
         # create/update output file
-        open(self.current_file, 'a').close()
+        open(self.local_file, 'a').close()
 
         # set delay between HTTP requests
-        self.delay_http = delay_http  # ms
+        self.delay_http = delay_http      # seconds
         self.delay_log = delay_log
+        self.delay_wget = delay_wget
         self.prev_time_http = -delay_http # no delay on first run
         self.prev_time_log = -delay_log
+        self.prev_time_wget = -delay_wget
 
     def wget(self):
         """
         Starts a wget process.
         User should never call this. Call download() instead.
         """
-        return subprocess.Popen(['wget', '-c', self.url_in(),
-            '-O', self.current_file], shell=False, stdout=subprocess.PIPE,
+        return subprocess.Popen(['wget', '-c', self.url(),
+            '-O', self.local_file], shell=False, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
 
     def download(self):
         """
         Starts wget process if none existed. Do nothing otherwise.
         """
-        if not self.alive():
+        if (not self.alive() and
+                time.time() - self.prev_time_wget >= self.delay_wget):
             # wget not running
             self.wget_proc = self.wget()
+            self.prev_time_wget = time.time()
 
     def terminate(self):
         """
@@ -90,28 +93,31 @@ class WGet:
             return False
         return True
 
-    def size_in(self):
+    def size_extern(self):
         # time delay this request to like 5seconds per request or else it's
         # a DDOS attack
         #self.url = urllib.urlopen(self.ip_addr + self.in_file)
-        if time.time() - self.prev_time_http > self.delay_http:
-            self.current_size = int(self.url.info().dict['content-length'])
+        if time.time() - self.prev_time_http >= self.delay_http:
+            self.extern_file_size = int(self.url.info().dict['content-length'])
             self.prev_time_http = time.time()
-        return self.current_size
+        return self.extern_file_size
 
-    def size_current(self):
-        return os.path.getsize(self.current_file)
+    def size_local(self):
+        return os.path.getsize(self.local_file)
 
     def progress(self):
-        return float(self.size_current())/self.size_in()
+        return float(self.size_local())/self.size_extern()
 
-    def url_in(self):
-        return self.in_dir + self.in_file
+    def url(self):
+        return self.extern_dir + self.extern_file
 
     def log(self):
-        if time.time() - self.prev_time_log > self.delay_log:
-            self.logger.debug(str(self))
+        if time.time() - self.prev_time_log >= self.delay_log:
+            self.logger.debug(self.time()+" "+str(self))
             self.prev_time_log = time.time()
+
+    def time(self):
+        return time.strftime("%Y-%m-%d %H:%M:%S")
 
     def __str__(self):
         s = "Wget Status: "
@@ -120,9 +126,9 @@ class WGet:
         else:
             s += "dead"
         s += "\n"
-        s += "Current Size: " + str(self.size_current())
+        s += "Current Size: " + str(self.size_local())
         s += "\n"
-        s += "Incoming Size: " + str(self.size_in())
+        s += "Incoming Size: " + str(self.size_extern())
         s += "\n"
         s += "Progress: {0:.2%}".format(self.progress())
         return s

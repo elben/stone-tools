@@ -97,10 +97,10 @@ def main():
             wget.terminate()
 
         wget.log()
-        gui.s.addstr(9, 1, 'Wget Alive: ' + str(wget.alive()))
-        gui.s.addstr(6, 1, 'File Size: \t' + str(wget.size_in()))
-        gui.s.addstr(7, 1, 'Current Size: \t' + str(wget.size_current()))
-        gui.s.addstr(8, 1, 'Progress: {0:.2%}'.format(wget.progress()))
+        gui.s.addstr(9, 1, 'Wget Alive: \t' + str(wget.alive()))
+        gui.s.addstr(6, 1, 'File Size: \t' + str(wget.size_extern()))
+        gui.s.addstr(7, 1, 'Current Size: \t' + str(wget.size_local()))
+        gui.s.addstr(8, 1, 'Progress: \t{0:.2%}'.format(wget.progress()))
 
         # bar not chnging?
         progress_bar(wget.progress(), 10, 1)
