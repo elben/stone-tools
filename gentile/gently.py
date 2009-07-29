@@ -3,8 +3,9 @@
 import subprocess
 import time
 import os
-import urllib
+import urllib2
 import logging
+import logging.handlers
 import datetime
 
 
@@ -18,29 +19,40 @@ class WGet:
     """
 
     def __init__(self, in_dir, in_file, current_file=None,
-            delay_http=5000, delay_log=5000):
+            logger=None, delay_http=5000, delay_log=5000):
+
+        # set up logging
+        if logger is None:
+            LOG_FILENAME = '/var/log/stone-gently.log'
+            self.logger = logging.getLogger('stone-logger')
+            self.logger.setLevel(logging.DEBUG)
+            handler = logging.handlers.RotatingFileHandler(LOG_FILENAME,
+                    maxBytes=1000, backupCount=5)
+            self.logger.addHandler(handler)
+        else:
+            self.logger = logger
 
         self.in_dir = in_dir
         self.in_file = in_file
-        if self.current_file is None:
+        if current_file is None:
             self.current_file = self.in_file
         else:
             self.current_file = current_file
         self.current_size = 0
 
         self.wget_proc = None
-        self.url = urllib.urlopen(self.in_file)
+        try:
+            self.logger.debug("Attempting to open " +
+                    self.in_dir+self.in_file+".")
+            self.url = urllib2.urlopen(self.in_dir + self.in_file, timeout=5)
+        except urllib2.URLError:
+            msg = "Timeout attempting to open "+self.in_dir+self.in_file+"."
+            self.logger.critical(msg)
+            raise TimeoutException(msg)
+
 
         # create/update output file
         open(self.current_file, 'a').close()
-
-        # set up logging
-        LOG_FILENAME = '/var/log/stone-gently'
-        self.logger = logging.getLogger('stone-logger')
-        self.logger.setLevel(logging.DEBUG)
-        handler = logging.handlers.RotatingFileHandler(
-                      LOG_FILENAME, maxBytes=20, backupCount=5)
-        self.logger.addHandler(handler)
 
         # set delay between HTTP requests
         self.delay_http = delay_http  # ms
@@ -69,12 +81,12 @@ class WGet:
         """
         Terminate wget process.
         """
-        if self.wget_proc is not None:
+        if self.wget_proc is not None and self.wget_proc.poll() is None:
             self.wget_proc.terminate()
             self.wget_proc = None
 
     def alive(self):
-        if self.wget_proc is None:
+        if self.wget_proc is None or self.wget_proc.poll() is not None:
             return False
         return True
 
@@ -88,7 +100,7 @@ class WGet:
         return self.current_size
 
     def size_current(self):
-        return os.path.getsize(file.file)
+        return os.path.getsize(self.current_file)
 
     def progress(self):
         return float(self.size_current())/self.size_in()
@@ -99,17 +111,17 @@ class WGet:
             self.prev_time_log = time.time()
 
     def __str__(self):
-        s = "wget: "
+        s = "Wget Status: "
         if self.alive():
             s += "alive"
         else:
             s += "dead"
         s += "\n"
-        s += "current size: " + self.size_current()
+        s += "Current Size: " + str(self.size_current())
         s += "\n"
-        s += "incoming size: " + self.size_in()
+        s += "Incoming Size: " + str(self.size_in())
         s += "\n"
-        s += "progress: {0:.2%}".format(self.progress())
+        s += "Progress: {0:.2%}".format(self.progress())
         return s
 
     def old_next(self, restart=True):
@@ -140,3 +152,6 @@ wget = WGet('http://elbenshira.com', '/d/file.ts', '', 5)
 for i in wget.wget():
     print i
 """
+
+class TimeoutException(Exception):
+    pass

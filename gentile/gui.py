@@ -6,8 +6,10 @@ import subprocess
 import os
 
 class file:
-    ip = "http://elbenshira.com/d/"
-    file = "vid0.ts"
+    ip = "http://localhost:8888/elbenshira/d/"
+    file = "rangers.mp3"
+    #ip = "http://elbenshira.com/d/"
+    #file = "elben_resume.pdf"
     out_file = ""
 
 class gui:
@@ -62,9 +64,12 @@ def main():
 
     delay=32
 
+    wget = None
+    try:
+        wget = gently.WGet(file.ip, file.file)
+    except gently.TimeoutException:
+        sys.exit()
 
-    subprocess.Popen(['touch', file.file]) # in case file does not exist
-    wget = gently.WGet(file.ip+file.file)
     download_file = False
     dl_dots = 0
     c = 0
@@ -91,15 +96,14 @@ def main():
         else:
             wget.terminate()
 
-        current_size = os.path.getsize(file.file)
-        percent_done = float(current_size)/wget.size()
-        gui.s.addstr(6, 1, 'File Size: \t' + str(wget.size()))
-        gui.s.addstr(7, 1, 'Current Size: \t' + str(current_size))
-        gui.s.addstr(8, 1, 'Percentage Done: {0:.2%}'.format(percent_done))
+        wget.log()
         gui.s.addstr(9, 1, 'Wget Alive: ' + str(wget.alive()))
+        gui.s.addstr(6, 1, 'File Size: \t' + str(wget.size_in()))
+        gui.s.addstr(7, 1, 'Current Size: \t' + str(wget.size_current()))
+        gui.s.addstr(8, 1, 'Progress: {0:.2%}'.format(wget.progress()))
 
         # bar not chnging?
-        progress_bar(percent_done, 10, 1)
+        progress_bar(wget.progress(), 10, 1)
 
         c = gui.s.getch()
     restore_screen()
