@@ -19,11 +19,11 @@ class WGet:
     """
 
     def __init__(self, extern_dir, extern_file, local_file=None,
-            logger=None, delay_wget=1, delay_http=5, delay_log=5):
+            logger=None, delay_wget=2, delay_http=5, delay_log=5):
 
         # set up logging
         if logger is None:
-            LOG_FILENAME = '/var/log/stone-gently.log'
+            LOG_FILENAME = 'logs/stone-gently.log'
             self.logger = logging.getLogger('stone-logger')
             self.logger.setLevel(logging.DEBUG)
             handler = logging.handlers.RotatingFileHandler(LOG_FILENAME,
@@ -43,17 +43,17 @@ class WGet:
         self.wget_proc = None
         try:
             self.logger.debug("Attempting to open " + self.url() + ".")
-            self.url = urllib2.urlopen(self.url(), timeout=5)
+            self.extern_url = urllib2.urlopen(self.url(), timeout=5)
         except urllib2.URLError:
             msg = "Timeout attempting to open " + self.url() + "."
             self.logger.critical(msg)
             raise TimeoutException(msg)
-
+        self.logger.debug("Opened " + self.url() + ".")
 
         # create/update output file
         open(self.local_file, 'a').close()
 
-        # set delay between HTTP requests
+        # set delay between requests
         self.delay_http = delay_http      # seconds
         self.delay_log = delay_log
         self.delay_wget = delay_wget
@@ -64,6 +64,7 @@ class WGet:
     def wget(self):
         """
         Starts a wget process.
+
         User should never call this. Call download() instead.
         """
         return subprocess.Popen(['wget', '-c', self.url(),
@@ -72,7 +73,7 @@ class WGet:
 
     def download(self):
         """
-        Starts wget process if none existed. Do nothing otherwise.
+        Starts wget process if none existed; do nothing otherwise.
         """
         if (not self.alive() and
                 time.time() - self.prev_time_wget >= self.delay_wget):
@@ -96,10 +97,14 @@ class WGet:
     def size_extern(self):
         # time delay this request to like 5seconds per request or else it's
         # a DDOS attack
-        #self.url = urllib.urlopen(self.ip_addr + self.in_file)
+        #self.extern_url = urllib.urlopen(self.ip_addr + self.in_file)
         if time.time() - self.prev_time_http >= self.delay_http:
-            self.extern_file_size = int(self.url.info().dict['content-length'])
+            # regrab data
+            self.extern_url = urllib2.urlopen(self.url(), timeout=5)
+            self.extern_file_size = int(self.extern_url.info().dict['content-length'])
             self.prev_time_http = time.time()
+            self.logger.debug("Grabed file size: " +
+                    str(self.extern_file_size))
         return self.extern_file_size
 
     def size_local(self):

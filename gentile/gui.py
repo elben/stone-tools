@@ -4,6 +4,7 @@ import traceback
 import gently
 import subprocess
 import os
+import time
 
 class file:
     ip = "http://localhost:8888/elbenshira/d/"
@@ -35,13 +36,11 @@ def restore_screen():
     curses.endwin()
 
 def progress_bar(percent=0, row=0, col=0):
-    if percent > 100:
-        percent = 100
-    elif percent <= 1 and percent > 0:
-        percent *= 100
+    if percent > 1:
+        percent = 1
     elif percent < 0:
         percent = 0
-    percent = int(percent)
+    percent = int(percent*100)
 
     wait = "-"
     done = "|"
@@ -62,7 +61,13 @@ def main():
     init_screen()
     gui.s.nodelay(1)    # stop getch() from blocking
 
-    delay=32
+    loop_delay = .1
+    prev_loop_time = -loop_delay
+
+    # for download "..."
+    dots_delay = 0.5    # seconds
+    prev_dots_time = -dots_delay
+    dots_count = 0
 
     wget = None
     try:
@@ -71,7 +76,6 @@ def main():
         sys.exit()
 
     download_file = False
-    dl_dots = 0
     c = 0
     while True:
         gui.s.erase()
@@ -88,11 +92,10 @@ def main():
         gui.s.addstr(5, 1, 'Status:')
         if download_file:
             wget.download()
-            gui.s.addstr(5, 9, 'Downloading' + ('.'*(dl_dots/delay)))
-            if dl_dots >= delay*4:
-                dl_dots = 0
-            else:
-                dl_dots += 1
+            gui.s.addstr(5, 9, 'Downloading' + ('.'*(dots_count%4)))
+            if time.time() - prev_dots_time >= dots_delay:
+                prev_dots_time = time.time()
+                dots_count += 1
         else:
             wget.terminate()
 
@@ -102,10 +105,10 @@ def main():
         gui.s.addstr(7, 1, 'Current Size: \t' + str(wget.size_local()))
         gui.s.addstr(8, 1, 'Progress: \t{0:.2%}'.format(wget.progress()))
 
-        # bar not chnging?
         progress_bar(wget.progress(), 10, 1)
 
         c = gui.s.getch()
+        time.sleep(.2)          # to kill spinning
     restore_screen()
 
 
