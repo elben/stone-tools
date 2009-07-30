@@ -29,6 +29,8 @@ class WGet:
             handler = logging.handlers.RotatingFileHandler(LOG_FILENAME,
                     maxBytes=1000, backupCount=5)
             self.logger.addHandler(handler)
+            #self.logger.addHandler(
+                    #logging.handlers.SysLogHandler('var/log/'))
         else:
             self.logger = logger
 
@@ -42,13 +44,13 @@ class WGet:
 
         self.wget_proc = None
         try:
-            self.logger.debug("Attempting to open " + self.url() + ".")
+            self.log("Attempting to open " + self.url() + ".")
             self.extern_url = urllib2.urlopen(self.url(), timeout=5)
         except urllib2.URLError:
             msg = "Timeout attempting to open " + self.url() + "."
-            self.logger.critical(msg)
+            self.log(msg, logger.CRITICAL)
             raise TimeoutException(msg)
-        self.logger.debug("Opened " + self.url() + ".")
+        self.log("Opened " + self.url() + ".")
 
         # create/update output file
         open(self.local_file, 'a').close()
@@ -79,6 +81,7 @@ class WGet:
                 time.time() - self.prev_time_wget >= self.delay_wget):
             # wget not running
             self.wget_proc = self.wget()
+            self.log("wget started.")
             self.prev_time_wget = time.time()
 
     def terminate(self):
@@ -88,6 +91,7 @@ class WGet:
         if self.alive():
             self.wget_proc.terminate()
             self.wget_proc = None
+            self.log("wget terminated.")
 
     def alive(self):
         if self.wget_proc is None or self.wget_proc.poll() is not None:
@@ -103,8 +107,7 @@ class WGet:
             self.extern_url = urllib2.urlopen(self.url(), timeout=5)
             self.extern_file_size = int(self.extern_url.info().dict['content-length'])
             self.prev_time_http = time.time()
-            self.logger.debug("Grabed file size: " +
-                    str(self.extern_file_size))
+            self.log("grabbed external file size: " + str(self.extern_file_size))
         return self.extern_file_size
 
     def size_local(self):
@@ -116,26 +119,26 @@ class WGet:
     def url(self):
         return self.extern_dir + self.extern_file
 
-    def log(self):
+    def log_status(self):
         if time.time() - self.prev_time_log >= self.delay_log:
-            self.logger.debug(self.time()+" "+str(self))
+            self.log(str(self))
             self.prev_time_log = time.time()
+
+    def log(self, msg, lvl=logging.DEBUG):
+        self.logger.log(lvl, self.time()+" "+str(msg))
 
     def time(self):
         return time.strftime("%Y-%m-%d %H:%M:%S")
 
     def __str__(self):
-        s = "Wget Status: "
+        s = "wget "
         if self.alive():
-            s += "alive"
+            s += "alive. "
         else:
-            s += "dead"
-        s += "\n"
-        s += "Current Size: " + str(self.size_local())
-        s += "\n"
-        s += "Incoming Size: " + str(self.size_extern())
-        s += "\n"
-        s += "Progress: {0:.2%}".format(self.progress())
+            s += "dead. "
+        s += "External Size: " + str(self.size_local()) + ". "
+        s += "Local Size: " + str(self.size_extern()) + ". "
+        s += "Progress: {0:.2%}".format(self.progress()) + ". "
         return s
 
     def old_next(self, restart=True):

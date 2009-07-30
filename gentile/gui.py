@@ -99,7 +99,7 @@ def main():
         else:
             wget.terminate()
 
-        wget.log()
+        wget.log_status()
         gui.s.addstr(9, 1, 'Wget Alive: \t' + str(wget.alive()))
         gui.s.addstr(6, 1, 'File Size: \t' + str(wget.size_extern()))
         gui.s.addstr(7, 1, 'Current Size: \t' + str(wget.size_local()))
