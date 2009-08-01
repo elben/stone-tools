@@ -69,9 +69,9 @@ def main():
     prev_dots_time = -dots_delay
     dots_count = 0
 
-    wget = None
+    wget = gently.WGet(file.ip, file.file)
     try:
-        wget = gently.WGet(file.ip, file.file)
+        wget.connect()
     except gently.TimeoutException:
         sys.exit()
 

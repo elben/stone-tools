@@ -19,18 +19,18 @@ class WGet:
     """
 
     def __init__(self, extern_dir, extern_file, local_file=None,
-            logger=None, delay_wget=2, delay_http=5, delay_log=5):
+            logger=None, log_file='logs/stone-gentile.log',
+            delay_wget=2, delay_http=5, delay_log=5):
 
         # set up logging
         if logger is None:
-            LOG_FILENAME = 'logs/stone-gently.log'
-            self.logger = logging.getLogger('stone-logger')
+            self.log_file = log_file
+            # set hierarchy
+            self.logger = logging.getLogger('stone.gentile')
             self.logger.setLevel(logging.DEBUG)
-            handler = logging.handlers.RotatingFileHandler(LOG_FILENAME,
+            handler = logging.handlers.RotatingFileHandler(self.log_file,
                     maxBytes=1000, backupCount=5)
             self.logger.addHandler(handler)
-            #self.logger.addHandler(
-                    #logging.handlers.SysLogHandler('var/log/'))
         else:
             self.logger = logger
 
@@ -41,16 +41,6 @@ class WGet:
         else:
             self.local_file = local_file
         self.extern_file_size = 0
-
-        self.wget_proc = None
-        try:
-            self.log("Attempting to open " + self.url() + ".")
-            self.extern_url = urllib2.urlopen(self.url(), timeout=5)
-        except urllib2.URLError:
-            msg = "Timeout attempting to open " + self.url() + "."
-            self.log(msg, logger.CRITICAL)
-            raise TimeoutException(msg)
-        self.log("Opened " + self.url() + ".")
 
         # create/update output file
         open(self.local_file, 'a').close()
@@ -63,26 +53,37 @@ class WGet:
         self.prev_time_log = -delay_log
         self.prev_time_wget = -delay_wget
 
-    def wget(self):
+    def connect(self, timeout=5, attempts=3):
         """
-        Starts a wget process.
-
-        User should never call this. Call download() instead.
+        Connect to specified URL.
+        
+        Call this method before calling other methods.
         """
-        return subprocess.Popen(['wget', '-c', self.url(),
-            '-O', self.local_file], shell=False, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
+        self.wget_proc = None
+        try:
+            self.log("Attempting to open " + self.url() + ".")
+            self.extern_url = urllib2.urlopen(self.url(), timeout=timeout)
+        except urllib2.URLError:
+            msg = "Timeout attempting to open " + self.url() + "."
+            self.log(msg, logger.CRITICAL)
+            raise TimeoutException(msg)
+        self.log("Opened " + self.url() + ".")
 
-    def download(self):
+    def download(self, autokill=True):
         """
         Starts wget process if none existed; do nothing otherwise.
+
+        If autokill is True, then WGet will kill and restart the
+        wget process every delay_wget seconds.
         """
-        if (not self.alive() and
-                time.time() - self.prev_time_wget >= self.delay_wget):
+        delayed = time.time() - self.prev_time_get >= self.delay_wget
+        if not self.alive() and delayed:
             # wget not running
-            self.wget_proc = self.wget()
-            self.log("wget started.")
+            self.start()
             self.prev_time_wget = time.time()
+        elif autokill and self.alive() and autokill:
+            self.terminate()
+            self.start()
 
     def terminate(self):
         """
@@ -141,7 +142,19 @@ class WGet:
         s += "Progress: {0:.2%}".format(self.progress()) + ". "
         return s
 
+    def start(self):
+        """
+        Starts a wget process.
+
+        User should never call this. Call download() instead.
+        """
+        self.wget_proc = subprocess.Popen(['wget', '-c', self.url(), '-O',
+            self.local_file], shell=False, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.log("wget started.")
+
     def old_next(self, restart=True):
+        pass
         """
         An external force calls next() multiple times. next() only
         activates (does anything) if self.delay ms has passed since last
