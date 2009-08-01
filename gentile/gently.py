@@ -65,7 +65,7 @@ class WGet:
             self.extern_url = urllib2.urlopen(self.url(), timeout=timeout)
         except urllib2.URLError:
             msg = "Timeout attempting to open " + self.url() + "."
-            self.log(msg, logger.CRITICAL)
+            self.log(msg, logging.CRITICAL)
             raise TimeoutException(msg)
         self.log("Opened " + self.url() + ".")
 
@@ -76,12 +76,12 @@ class WGet:
         If autokill is True, then WGet will kill and restart the
         wget process every delay_wget seconds.
         """
-        delayed = time.time() - self.prev_time_get >= self.delay_wget
+        delayed = time.time() - self.prev_time_wget >= self.delay_wget
         if not self.alive() and delayed:
             # wget not running
             self.start()
             self.prev_time_wget = time.time()
-        elif autokill and self.alive() and autokill:
+        elif autokill and self.alive() and delayed:
             self.terminate()
             self.start()
 
