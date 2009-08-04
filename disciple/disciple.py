@@ -4,6 +4,7 @@ import time
 
 teacher_ip = "192.168.1.100"
 teacher_dir = "/disciple_vids"
+teacher_local_dir = "/teacher"
 nfs_dir = "/teacher"
 hdpvr_device = "video0"
 video_prefix = "disciple_"
@@ -43,17 +44,20 @@ def main():
             
             continue
         
-        fname = teacher_dir + "/" + video_prefix + fname
+        fname = teacher_local_dir + "/" + video_prefix + fname
         
-        # cat from device to the nfs mount
+        # kill all current cat processes, makes sure we don't do anything dumb
+        sp.call(["killall", "cat"], stdout = sp.PIPE, stderr = sp.STDOUT)
+        
+        # cat from device to the nfs mount, won't release control until done
         print "Capturing video to", "'" + fname + "'"
-        cat_process = cat_video("video0", fname)
+        cat_video("video0", fname)
+        print "\nVIDEO CAPTURE ENDED!\n"
     
 def cat_video(device, out_file):
     cmd = "cat /dev/%(d)s >> %(of)s" % {"d": device, "of": out_file}
-    cat = sp.Popen(cmd, shell = True, stdout = sp.PIPE, stderr = sp.PIPE)
     
-    return cat
+    return sp.call(cmd, shell = True, stdout = sp.PIPE, stderr = sp.PIPE)
 
 def get_mac_address():
     ifconfig = sp.Popen( ["ifconfig", "-a"], stdout = sp.PIPE )
@@ -70,6 +74,7 @@ def get_mac_address():
             mac_address = line.split("HWaddr ")
             mac_address = mac_address[1] # the part after HWaddr
             mac_address = mac_address.replace(":", "") # remove colons
+            mac_address = mac_address.strip() # strip newlines/spaces from ends
             
             # make sure we've got a real mac address
             if len(mac_address) != 12: # length with colons removed
