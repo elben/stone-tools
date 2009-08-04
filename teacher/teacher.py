@@ -16,7 +16,8 @@ def main():
     
     while True:
         # done at beginning to prevent spamming messages via 'continue'
-        time.sleep(1)
+        sleep_time = 1
+        time.sleep(sleep_time)
         
         # keep previous sizes
         previous = []
@@ -38,11 +39,14 @@ def main():
                     
                     bad_files.append( file_i[0] )
                     
-                    print "Added bad file" + file_i[0] + "."
-                    print "Current bad files are;"
+                    print "Added bad file" + file_i[0]
+                    print "Current bad files are:"
                     for f in bad_files:
                         print "  " + f
                     print ""
+        
+        if len(bad_files) == len(current) and len(current) != 0:
+            print "No good files found!"
         
         # update symlink
         link_name = video_dir + "sermon_symlink"
@@ -50,7 +54,7 @@ def main():
         symbolic_link = update_symlink(link_name, symbolic_link, current,
                                        bad_files)
         
-        # print symlink changes
+        # print symlink changes if it changed from the previous iteration
         if prev_symlink != symbolic_link:
             print "Symbolic link set to", symbolic_link
             print ""
