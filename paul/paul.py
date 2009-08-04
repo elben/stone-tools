@@ -1,4 +1,4 @@
-import gently.WGet
+import gently
 import os
 import time
 
@@ -12,33 +12,52 @@ sermon_num = 0
 fs = 0
 prev_fs = 0
 
-symlink_file = "sermon.ts"
-wget = gently.WGet(url, filename, outfile, delay_wget=5)
+symlink_file = "sermon_symlink"
+local_symlink = "sermon.ts"
+url = "http://192.168.1.100/"
+
+prefix = time.strftime("%m-%d-%Y_%H:%M_")
+filename = prefix + str(sermon_num)
+
+wget = gently.WGet(url, symlink_file, filename, delay_wget=5)
 wget.connect()
 
+try:
+    os.remove(local_symlink)
+except:
+    pass
+
+os.symlink(filename, local_symlink)
+
+print "Starting download to", filename
 while True:
     # keep from burning cycles and spamming server with fs requests
     time.sleep(2)
     
     # update file size (not too often)
     prev_fs = fs
-    fs = wget.size_local()
-    
-    # set the file name
-    prefix = time.strftime("%Y-%m-%d_%H:%M:%S_")
-    filename = prefix + str(sermon_num)
-    
+    fs = wget.size_extern()
+
     # if the file we're trying to download is 50% smaller than the last one
     if fs < FS_DIFF * prev_fs:
         # create a new file name for it
         sermon_num += 1
-        prefix = time.strftime("%Y-%m-%d_%H:%M:%S_")
+        prefix = time.strftime("%m-%d-%Y_%H:%M_")
         filename = prefix + str(sermon_num)
         
-        # chenge the downlaod clocation and symlink to the new file
-        wget.outfile = filename
-        os.remove(symlink_file)
-        os.symlink(symlink_file, filename)
+        # start a new wget and symlink to the new file
+        wget.terminate()
+        
+        print "New sermon started remotely, downloading to", filename
+        
+        wget = gently.WGet(url, symlink_file, filename, delay_wget=5)
+        
+        try:
+            os.remove(local_symlink)
+        except:
+            pass
+        
+        os.symlink(filename, local_symlink)
         
         # reconnect since the file download location changed
         wget.connect()
