@@ -2,7 +2,7 @@ import subprocess as sp
 import os
 import time
 
-video_dir = "/var/www/"
+video_dir = "/disciple_vids/"
 video_prefix = "disciple_"
 
 def main():
@@ -11,6 +11,7 @@ def main():
     previous = []
     bad_files = []
     
+    prev_symlink = None
     symbolic_link = None
     
     while True:
@@ -24,6 +25,9 @@ def main():
         # get files and their sizes from the directory
         current = get_video_files(video_dir, video_prefix)
         
+        if current == []:
+            print "Waiting for video files..."
+        
         # find bad files
         for file_i in current:
             for file_j in previous:
@@ -31,29 +35,30 @@ def main():
                 # and that file is not already in bad_files
                 if ( file_i[0] == file_j[0] and file_i[1] <= file_j[1] and
                      not file_i[0] in bad_files ):
+                    
                     bad_files.append( file_i[0] )
+                    
+                    print "Added bad file" + file_i[0] + "."
+                    print "Current bad files are;"
+                    for f in bad_files:
+                        print "  " + f
+                    print ""
         
         # update symlink
         link_name = video_dir + "sermon_symlink"
+        prev_symlink = symbolic_link
         symbolic_link = update_symlink(link_name, symbolic_link, current,
                                        bad_files)
         
-        print "\n-----------------------------------------------------------\n"
-        print "previous =", previous
-        print ""
-        print "current =", current
-        print ""
-        print "bad_files =", bad_files
-        print ""
-        print "symbolic_link =", symbolic_link
-
+        # print symlink changes
+        if prev_symlink != symbolic_link:
+            print "Symbolic link set to", symbolic_link
+            print ""
+        
 def update_symlink(link_name, cur_link, current_files, bad_files):
     if cur_link in bad_files or cur_link == None:
         for file in current_files:
             if file[0] not in bad_files:
-                if cur_link != None:
-                    print "FAILOVER"
-                
                 cur_link = file[0]
                 
                 # remove old link if it exists
@@ -62,6 +67,7 @@ def update_symlink(link_name, cur_link, current_files, bad_files):
                 except:
                     pass
                 
+                # create new symlink
                 os.symlink(cur_link, link_name)
                 
                 break
@@ -78,7 +84,7 @@ def get_video_files(dir, prefix):
     for file in os.listdir(dir):
         # make sure it's good, has a name with our prefix, and is not a dir
         if ( file.startswith(prefix) and not os.path.isdir(file) and
-             not os.stat(dir+ file).st_size == 0):
+             not os.stat(dir + file).st_size == 0):
             video_files.append(dir + file)
     
     # get file sizes
