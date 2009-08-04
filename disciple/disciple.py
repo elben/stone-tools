@@ -46,15 +46,13 @@ def main():
         
         fname = teacher_local_dir + "/" + video_prefix + fname
         
-        # cat from device to the nfs mount
-        print "Capturing video to", "'" + fname + "'"
-        print "\nVIDEO CAPTURE FAILED!\n"
-        
         # kill all current cat processes, makes sure we don't do anything dumb
         sp.call(["killall", "cat"], stdout = sp.PIPE, stderr = sp.STDOUT)
         
-        # this will not release control until it is done or it fails
+        # cat from device to the nfs mount, won't release control until done
+        print "Capturing video to", "'" + fname + "'"
         cat_video("video0", fname)
+        print "\nVIDEO CAPTURE ENDED!\n"
     
 def cat_video(device, out_file):
     cmd = "cat /dev/%(d)s >> %(of)s" % {"d": device, "of": out_file}
