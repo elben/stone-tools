@@ -2,7 +2,7 @@ import subprocess as sp
 import os
 import time
 
-video_dir = "/disciple_vids/"
+video_dir = "/vaar/www/"
 video_prefix = "disciple_"
 
 def main():
