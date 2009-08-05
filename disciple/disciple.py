@@ -3,7 +3,7 @@ import os
 import time
 
 teacher_ip = "192.168.1.100"
-teacher_dir = "/disciple_vids"
+teacher_dir = "/var/www"
 teacher_local_dir = "/teacher"
 nfs_dir = "/teacher"
 hdpvr_device = "video0"
