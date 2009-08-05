@@ -3,9 +3,9 @@ import time
 import sys
 
 #url = "http://localhost:8888/elbenshira/d/"
-url = "http://elbenshira.com/d"
-filename = "foo"
-outfile = "foo"
+url = "http://192.168.1.101"
+filename = "sermon.ts"
+outfile = "sermon.ts"
 
 def main(argv=None):
     if argv is None:

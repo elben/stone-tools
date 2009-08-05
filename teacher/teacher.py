@@ -2,7 +2,7 @@ import subprocess as sp
 import os
 import time
 
-video_dir = "/vaar/www/"
+video_dir = "/var/www/"
 video_prefix = "disciple_"
 
 def main():
@@ -16,7 +16,7 @@ def main():
     
     while True:
         # done at beginning to prevent spamming messages via 'continue'
-        sleep_time = 1
+        sleep_time = 10
         time.sleep(sleep_time)
         
         # keep previous sizes
@@ -40,11 +40,12 @@ def main():
                     bad_files.append( file_i[0] )
                     
                     print "Added bad file" + file_i[0]
+                    
                     print "Current bad files are:"
                     for f in bad_files:
                         print "  " + f
                     print ""
-        
+            
         if len(bad_files) == len(current) and len(current) != 0:
             print "No good files found!"
         

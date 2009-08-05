@@ -16,18 +16,19 @@ symlink_file = "sermon_symlink"
 local_symlink = "sermon.ts"
 url = "http://192.168.1.100/"
 
+web_dir = "/var/www/"
 prefix = time.strftime("%m-%d-%Y_%H:%M_")
-filename = prefix + str(sermon_num)
+filename = web_dir + prefix + str(sermon_num)
 
 wget = gently.WGet(url, symlink_file, filename, delay_wget=5)
 wget.connect()
 
 try:
-    os.remove(local_symlink)
+    os.remove(web_dir + local_symlink)
 except:
     pass
 
-os.symlink(filename, local_symlink)
+os.symlink(filename, web_dir + local_symlink)
 
 print "Starting download to", filename
 while True:
@@ -43,7 +44,7 @@ while True:
         # create a new file name for it
         sermon_num += 1
         prefix = time.strftime("%m-%d-%Y_%H:%M_")
-        filename = prefix + str(sermon_num)
+        filename = web_dir + prefix + str(sermon_num)
         
         # start a new wget and symlink to the new file
         wget.terminate()
@@ -53,11 +54,11 @@ while True:
         wget = gently.WGet(url, symlink_file, filename, delay_wget=5)
         
         try:
-            os.remove(local_symlink)
+            os.remove(web_dir + local_symlink)
         except:
             pass
         
-        os.symlink(filename, local_symlink)
+        os.symlink(filename, web_dir + local_symlink)
         
         # reconnect since the file download location changed
         wget.connect()
