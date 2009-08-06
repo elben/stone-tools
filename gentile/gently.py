@@ -19,9 +19,11 @@ class WGet:
     dies due to EOF. Also gives statistics of the download.
     """
 
-    def __init__(self, extern_dir, extern_file, local_file=None,
+    def __init__(self, remote_dir, remote_file, local_file=None,
             logger=None, log_file='logs/stone-gentile.log',
             delay_wget=2, delay_http=5, delay_log=1):
+
+        self.wget_proc = None
 
         # set up logging
         if logger is None:
@@ -35,13 +37,13 @@ class WGet:
         else:
             self.logger = logger
 
-        self.extern_dir = extern_dir
-        self.extern_file = extern_file
+        self.remote_dir = remote_dir
+        self.remote_file = remote_file
         if local_file is None:
-            self.local_file = self.extern_file
+            self.local_file = self.remote_file
         else:
             self.local_file = local_file
-        self.extern_file_size = 0
+        self.remote_file_size = 0
 
         # create/update output file
         open(self.local_file, 'a').close()
@@ -53,22 +55,6 @@ class WGet:
         self.prev_time_http = -delay_http # no delay on first run
         self.prev_time_log = -delay_log
         self.prev_time_wget = -delay_wget
-
-    def connect(self, timeout=5, attempts=3):
-        """
-        Connect to specified URL.
-        
-        Call this method before calling other methods.
-        """
-        self.wget_proc = None
-        try:
-            self.log("Attempting to open " + self.url() + ".")
-            self.extern_url = urllib2.urlopen(self.url(), timeout=timeout)
-        except urllib2.URLError:
-            msg = "Timeout attempting to open " + self.url() + "."
-            self.log(msg, logging.CRITICAL)
-            raise TimeoutException(msg)
-        self.log("Opened " + self.url() + ".")
 
     def download(self, autokill=True):
         """
@@ -102,30 +88,30 @@ class WGet:
             return False
         return True
 
-    def size_extern(self):
-        """Returns size (bytes) of external file."""
+    def size_remote(self):
+        """Returns size (bytes) of remote file."""
         if time.time() - self.prev_time_http >= self.delay_http:
             # regrab data
-            self.extern_url = urllib2.urlopen(self.url(), timeout=5)
-            self.extern_file_size = int(self.extern_url.info().dict['content-length'])
+            self.connect()
+            self.remote_file_size = int(self.remote_url.info().dict['content-length'])
             self.prev_time_http = time.time()
-            self.log("grabbed external file size: " + str(self.extern_file_size))
-        return self.extern_file_size
+            self.log("grabbed remote file size: " + str(self.remote_file_size))
+        return self.remote_file_size    # use old data
 
     def size_local(self):
         """Returns size (bytes) of local file."""
         return os.path.getsize(self.local_file)
 
     def progress(self):
-        return float(self.size_local())/self.size_extern()
+        return float(self.size_local())/self.size_remote()
 
     def url(self):
-        return os.path.join(self.extern_dir, self.extern_file)
+        return os.path.join(self.remote_dir, self.remote_file)
 
     def log_status(self):
         if time.time() - self.prev_time_log >= self.delay_log:
             self.log("wget alive: " + str(self.alive()))
-            self.log("external file size: " + str(self.size_extern()))
+            self.log("remote file size: " + str(self.size_remote()))
             self.log("local file size: " + str(self.size_local()))
             self.prev_time_log = time.time()
 
@@ -137,9 +123,22 @@ class WGet:
 
     def __str__(self):
         s = "wget alive: " + str(self.alive()) + "\n"
-        s += "external file size: " + str(self.size_extern()) + "\n"
+        s += "remote file size: " + str(self.size_remote()) + "\n"
         s += "local file size: " + str(self.size_local())
         return s
+
+    def connect(self, timeout=5):
+        """
+        Attempt to connect to specified URL.
+
+        User should not call this method.
+        """
+        try:
+            self.remote_url = urllib2.urlopen(self.url(), timeout=timeout)
+        except urllib2.URLError:
+            msg = "Timeout attempting to open " + self.url() + "."
+            self.log(msg, logging.CRITICAL)
+            raise TimeoutException(msg)
 
     def start(self):
         """
