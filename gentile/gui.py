@@ -101,7 +101,7 @@ def main():
 
         wget.log_status()
         gui.s.addstr(9, 1, 'Wget Alive: \t' + str(wget.alive()))
-        gui.s.addstr(6, 1, 'File Size: \t' + str(wget.size_extern()))
+        gui.s.addstr(6, 1, 'File Size: \t' + str(wget.size_remote()))
         gui.s.addstr(7, 1, 'Current Size: \t' + str(wget.size_local()))
         gui.s.addstr(8, 1, 'Progress: \t{0:.2%}'.format(wget.progress()))
 
