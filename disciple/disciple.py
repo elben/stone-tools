@@ -7,11 +7,11 @@ teacher_ip = "192.168.1.100"
 remote_dir = "/var/www"
 nfs_dir = "/teacher"
 
-hdpvr_device = "video1"
+hdpvr_device = "video0"
 video_prefix = "disciple_"
 
-arm_file = nfs_dir + "/arm"
-record_file = nfs_dir + "/record"
+arm_file = nfs_dir + "/arm_"
+record_file = nfs_dir + "/record_"
 
 def main():
     while True:
@@ -63,9 +63,9 @@ def main():
                 break
         
         # open device for reading and ready a file to save video to
-        video_stream = open("/dev/" + device, "r")
+        video_stream = open("/dev/" + hdpvr_device, "r")
+        video_file_name = nfs_dir + "/" + video_prefix + mac_address
         video_file = open(video_file_name, "w")
-        video_file_name = nfs_dir + "/" + video_prefix + mac
         
         armed = get_arm_signal(mac_address)
         record = False
@@ -78,15 +78,16 @@ def main():
             print "Waiting for arm signal..."
             armed = get_arm_signal(mac_address)
             time.sleep(0.5)
-        
         print "Got arm signal"
         
         # if it's not go-time yet, throw data away but be ready
         while not record:
+            print "Waiting for record signal..."
             record = get_record_signal(mac_address)
             video_stream.read(read_size)
         
         # if it's go-time, write that data out to the file
+        print "Recording to '" + video_file_name "'..."
         while record:
             record = get_record_signal(mac_address)
             video_file.write(video_stream.read(read_size))
