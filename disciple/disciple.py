@@ -43,8 +43,8 @@ def main():
             mac_address = str( random.uniform(100000000000, 999999999999) )
         
         # create an "exist" file and wait for it to be removed as
-        # confirmation from teacher that things will start happening
-        print "Waiting for comfirmation of existence from teacher..."
+        # confirmation that things will start happening
+        print "Waiting for comfirmation of existence..."
         try:
             # create the "exist" file if we can
             exist_file_name = nfs_dir + "/exist_" + mac_address
@@ -81,19 +81,19 @@ def main():
         
         print "Got arm signal"
         
-        # if armed, wait to be told to record
-        while armed:
-            # if it's not go-time yet, throw data away but be ready
-            if not record:
-                record = get_record_signal(mac_address)
-                video_stream.read(read_size)
-            else: # if it's go-time, write that data out to the file
-                video_file.write(video_stream.read(read_size))
+        # if it's not go-time yet, throw data away but be ready
+        while not record:
+            record = get_record_signal(mac_address)
+            video_stream.read(read_size)
+        
+        # if it's go-time, write that data out to the file
+        while record:
+            record = get_record_signal(mac_address)
+            video_file.write(video_stream.read(read_size))
             
-            # make sure that if we ever stop recording, we disarm too
-            if not record:
-                "Disarming and stopping record..."
-                armed = False
+        # make sure that if we ever stop recording, we disarm too
+        print "Disarming and stopping record..."
+        armed = False
         
         # close the stream and file
         video_stream.close()
@@ -110,7 +110,7 @@ def get_arm_signal(mac_address):
 
 def get_record_signal(mac_address):
     try: # try to remove it and return true
-        os.remove(record_file + mac_address)
+        os.stat(record_file + mac_address)
         return True
     except: # otherwise it hasn't come in yet, so return false
         return False
