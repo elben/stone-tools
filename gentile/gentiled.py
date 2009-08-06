@@ -13,7 +13,6 @@ def main(argv=None):
         argv = sys.argv
 
     wget = gently.WGet(url, remote_file, local_file, delay_wget=5)
-    wget.connect()
     
     mplayer = None
     mplayer_size = 25000
