@@ -32,7 +32,7 @@ def main():
         # find bad files
         for file_i in current:
             for file_j in previous:
-                # if the files have the same name and the size has not grown
+                # if files have the same name and the size has not grown
                 # and that file is not already in bad_files
                 if ( file_i[0] == file_j[0] and file_i[1] <= file_j[1] and
                      not file_i[0] in bad_files ):
