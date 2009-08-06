@@ -48,6 +48,8 @@ def main():
             
         if len(bad_files) == len(current) and len(current) != 0:
             print "No good files found!"
+            print "Resetting bad files to give them a second chance!"
+            bad_files = []
         
         # update symlink
         link_name = video_dir + "sermon_symlink"
