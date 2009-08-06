@@ -30,27 +30,32 @@ def main():
             print "Waiting for video files..."
         
         # find bad files
-        for file_i in current:
-            for file_j in previous:
+        for file_cur in current:
+            for file_prev in previous:
                 # if files have the same name and the size has not grown
                 # and that file is not already in bad_files
-                if ( file_i[0] == file_j[0] and file_i[1] <= file_j[1] and
-                     not file_i[0] in bad_files ):
+                if ( file_cur[0] == file_prev[0] and
+                     file_cur[1] <= file_prev[1] and
+                     not file_cur[0] in bad_files ):
                     
-                    bad_files.append( file_i[0] )
+                    # don't add new recordings to bad_files
+                    if not file_cur[1] <= 0.5 * file_prev[1]:
+                        bad_files.append( file_cur[0] )
                     
-                    print "Added bad file" + file_i[0]
+                        print "Added bad file" + file_cur[0]
+                        
+                        print "Current bad files are:"
+                        for f in bad_files:
+                            print "  " + f[0]
+                        print ""
+                    else:
+                        # if it has shrunk drastically, it is no longer bad
+                        print "New sermon found, removing from bad files"
+                        bad_files.remove(file_cur[0])
                     
-                    print "Current bad files are:"
-                    for f in bad_files:
-                        print "  " + f
-                    print ""
-            
         if len(bad_files) == len(current) and len(current) != 0:
             print "No good files found!"
-            print "Resetting bad files to give them a second chance!"
-            bad_files = []
-        
+            
         # update symlink
         link_name = video_dir + "sermon_symlink"
         prev_symlink = symbolic_link
