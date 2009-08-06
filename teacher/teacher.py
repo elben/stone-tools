@@ -35,23 +35,24 @@ def main():
                 # if files have the same name and the size has not grown
                 # and that file is not already in bad_files
                 if ( file_cur[0] == file_prev[0] and
-                     file_cur[1] <= file_prev[1] and
-                     not file_cur[0] in bad_files ):
+                     file_cur[1] <= file_prev[1] ):
                     
                     # don't add new recordings to bad_files
-                    if not file_cur[1] <= 0.5 * file_prev[1]:
-                        bad_files.append( file_cur[0] )
-                    
-                        print "Added bad file" + file_cur[0]
-                        
-                        print "Current bad files are:"
-                        for f in bad_files:
-                            print "  " + f[0]
-                        print ""
-                    else:
+                    if file_cur[1] <= 0.5 * file_prev[1]:
                         # if it has shrunk drastically, it is no longer bad
+                        print ""
                         print "New sermon found, removing from bad files"
-                        bad_files.remove(file_cur[0])
+                        
+                        try:
+                            bad_files.remove(file_cur[0])
+                        except:
+                            pass
+                    else:
+                        # add it to bad_files if it's not already there
+                        if not file_cur[0] in bad_files:
+                            bad_files.append( file_cur[0] )
+                            
+                            print "Added bad file" + file_cur[0]
                     
         if len(bad_files) == len(current) and len(current) != 0:
             print "No good files found!"
