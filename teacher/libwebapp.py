@@ -61,7 +61,6 @@ class TeacherControl:
                 # arm signal was sent, and now 'arm' file does not
                 # exist; thus, disciple armed
                 self.states[i] |= TeacherControl.STATE_ARM_VERIFIED
-                self.remove_file('arm_'+id)
 
     def signal_record(self, ids):
         """
@@ -111,7 +110,7 @@ class TeacherControl:
         for file in os.listdir(self.dir):
             if (file.startswith(prefix) and not os.path.isdir(file)):
                 # valid prefix and not a directory
-                files.append(os.path.join(self.dir, file))
+                files.append(file)
         return files
 
     def reset(self, ids=None):
