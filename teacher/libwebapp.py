@@ -44,7 +44,7 @@ class TeacherControl:
 
         Creates 'arm' files and sets STATE_ARM_SENT.
         """
-        self.create_signal(self, ids, prefix="arm_",
+        self.create_signal(ids, prefix="arm_",
                 state=TeacherControl.STATE_ARM_SENT)
 
     def verify_arm(self):
@@ -67,7 +67,7 @@ class TeacherControl:
         """
         Signal given disciples (ids) to start recording.
         """
-        self.create_signal(self, ids, prefix="record_",
+        self.create_signal(ids, prefix="record_",
                 state=TeacherControl.STATE_RECORD_SENT)
 
     def end_record(self, ids):
@@ -94,7 +94,7 @@ class TeacherControl:
                     "failed to create '"+prefix+"' file for " + id)
 
             # flag the state
-            self.states[i] |= state
+            self.states[self.disciples.index(id)] |= state
 
 
     def search_id(self, prefix):
