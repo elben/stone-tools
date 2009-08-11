@@ -16,6 +16,10 @@ class TeacherControl:
         self.disciples = []     # unique identifier (e.g. MAC addr)
         self.states = []        # state of each disciple
     
+    def reset(self):
+        """Reset states of all disciples."""
+        self.states = [0x0 * len(self.states)]
+
     def verify_exist(self):
         """
         Finds and verifies the existence of disciples.
@@ -24,7 +28,8 @@ class TeacherControl:
         adds that new disciple to the list of known disciples.
         """
 
-        for id in self.search_id(prefix="exist_"):
+        for file in self.search(prefix="exist_"):
+            id = self.get_id(file)
             if id not in self.disciples:
                 # found new disciple
                 self.disciples.append(id)
@@ -34,6 +39,8 @@ class TeacherControl:
                 # attempt to handle error
                 i = self.disciples.index(id)
                 self.states[i] |= STATE_EXIST_VERIFIED
+            # signal to disciple that webapp verified existence
+            self.remove_file(file)
 
     def signal_arm(self, ids):
         """
@@ -41,21 +48,7 @@ class TeacherControl:
 
         Creates 'arm' files and sets STATE_ARM_SENT.
         """
-        
-        for id in ids:
-            try:
-                i = self.disciples.index(id)
-            except:
-                raise Exception("TeacherControl: " +
-                        "attempted to signal unknown id "+id)
-
-            # touch/create 'arm' file
-            try: 
-                open(os.path.join(self.dir, 'arm_'+id), 'a').close()
-            except:
-                raise Exception("TeacherControl: " + 
-                    "failed to create 'arm' file for " + id)
-            self.states[i] |= STATE_ARM_SENT
+        self.create_signal(self, ids, prefix="arm_", state=STATE_ARM_SENT)
 
     def verify_arm(self):
         """
@@ -71,11 +64,41 @@ class TeacherControl:
                 # arm signal was sent, and now 'arm' file does not
                 # exist; thus, disciple armed
                 self.states[i] |= STATE_ARM_VERIFIED
+                self.remove_file('arm_'+id)
 
-    def signal_record(self):
-        pass
-    def end_record(self):
-        pass
+    def signal_record(self, ids):
+        """
+        Signal given disciples (ids) to start recording.
+        """
+        self.create_signal(self, ids, prefix="record_",
+                state=STATE_RECORD_SENT)
+
+    def end_record(self, ids):
+        """
+        Signal given disciples (ids) to stop recording.
+
+        Removes 'record' files.
+        """
+        for id in ids:
+            self.remove_file('record_'+id)
+            self.states[self.disciples.index(id)] |= STATE_RECORD_END
+
+    def create_signal(self, ids, prefix, state):
+        for id in ids:
+            if id not in self.disciples:
+                raise Exception("TeacherControl: " +
+                        "attempted to signal unknown id "+id)
+
+            # touch/create signal file
+            try: 
+                open(os.path.join(self.dir, prefix+id), 'a').close()
+            except:
+                raise Exception("TeacherControl: " + 
+                    "failed to create '"+prefix+"' file for " + id)
+
+            # flag the state
+            self.states[i] |= state
+
 
     def search_id(self, prefix):
         return [self.get_id(file) for file in self.search(prefix)]
@@ -94,9 +117,11 @@ class TeacherControl:
                 files.append(self.dir + file)
         return files
 
-    def file_exists(self, prefix, id):
-        file = os.path.join(self.dir, prefix+id)
-        return os.path.isfile(file)
+    def remove_file(self, file):
+        os.remove(os.path.join(self.dir, file))
+
+    def file_exists(self, file):
+        return os.path.isfile(os.path.join(self.dir, file))
 
     def valid(self):
         """Returns True if TeacherControl is still in a valid state."""
