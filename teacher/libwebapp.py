@@ -29,12 +29,12 @@ class TeacherControl:
             if id not in self.disciples:
                 # found new disciple
                 self.disciples.append(id)
-                self.states.append(STATE_EXIST_VERIFIED)
+                self.states.append(TeacherControl.STATE_EXIST_VERIFIED)
             else:
                 # disciple's existence already known for some reason;
                 # attempt to handle error
                 i = self.disciples.index(id)
-                self.states[i] |= STATE_EXIST_VERIFIED
+                self.states[i] |= TeacherControl.STATE_EXIST_VERIFIED
             # signal to disciple that webapp verified existence
             self.remove_file(file)
 
@@ -44,7 +44,8 @@ class TeacherControl:
 
         Creates 'arm' files and sets STATE_ARM_SENT.
         """
-        self.create_signal(self, ids, prefix="arm_", state=STATE_ARM_SENT)
+        self.create_signal(self, ids, prefix="arm_",
+                state=TeacherControl.STATE_ARM_SENT)
 
     def verify_arm(self):
         """
@@ -59,7 +60,7 @@ class TeacherControl:
             if self.arm_sent(state) and not self.file_exists('arm_'+id):
                 # arm signal was sent, and now 'arm' file does not
                 # exist; thus, disciple armed
-                self.states[i] |= STATE_ARM_VERIFIED
+                self.states[i] |= TeacherControl.STATE_ARM_VERIFIED
                 self.remove_file('arm_'+id)
 
     def signal_record(self, ids):
@@ -67,7 +68,7 @@ class TeacherControl:
         Signal given disciples (ids) to start recording.
         """
         self.create_signal(self, ids, prefix="record_",
-                state=STATE_RECORD_SENT)
+                state=TeacherControl.STATE_RECORD_SENT)
 
     def end_record(self, ids):
         """
@@ -77,7 +78,7 @@ class TeacherControl:
         """
         for id in ids:
             self.remove_file('record_'+id)
-            self.states[self.disciples.index(id)] |= STATE_RECORD_END
+            self.states[self.disciples.index(id)] |= TeacherControl.STATE_RECORD_END
 
     def create_signal(self, ids, prefix, state):
         for id in ids:
@@ -110,7 +111,7 @@ class TeacherControl:
         for file in os.listdir(self.dir):
             if (file.startswith(prefix) and not os.path.isdir(file)):
                 # valid prefix and not a directory
-                files.append(self.dir + file)
+                files.append(os.path.join(self.dir, file))
         return files
 
     def reset(self, ids=None):
@@ -140,14 +141,17 @@ class TeacherControl:
     def __str__(self):
         s = ""
         for id, state in zip(self.disciples, self.states):
-            s += id + ":\n"
-            if arm_sent(state):
+            s += "id: " + id + "\n"
+            s += "state: " + str(state) + "\n"
+            if self.exist_verified(state):
+                s += "    Existence verified.\n"
+            if self.arm_sent(state):
                 s += "    Arm sent.\n"
-            if arm_verified(state):
+            if self.arm_verified(state):
                 s += "    Arm verified.\n"
-            if record_sent(state):
+            if self.record_sent(state):
                 s += "    Record sent.\n"
-            if record_end(state):
+            if self.record_end(state):
                 s += "    Record end.\n"
         return s
 
@@ -175,17 +179,21 @@ class TeacherControl:
         return id[::-1]
 
     @staticmethod
+    def exist_verified(state):
+        return state & TeacherControl.STATE_EXIST_VERIFIED != 0
+
+    @staticmethod
     def arm_sent(state):
-        return state & STATE_ARM_SENT != 0
+        return state & TeacherControl.STATE_ARM_SENT != 0
 
     @staticmethod
     def arm_verified(state):
-        return state & STATE_ARM_VERIFIED != 0
+        return state & TeacherControl.STATE_ARM_VERIFIED != 0
 
     @staticmethod
     def record_sent(state):
-        return state & STATE_RECORD_SENT != 0
+        return state & TeacherControl.STATE_RECORD_SENT != 0
 
     @staticmethod
     def record_end(state):
-        return state & STATE_RECORD_END != 0
+        return state & TeacherControl.STATE_RECORD_END != 0
