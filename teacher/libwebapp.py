@@ -45,7 +45,8 @@ class TeacherControl:
         Creates 'arm' files and sets STATE_ARM_SENT.
         """
         self.create_signal(ids, prefix="arm_",
-                state=TeacherControl.STATE_ARM_SENT)
+                state=TeacherControl.STATE_ARM_SENT,
+                precond=self.exist_verified)
 
     def verify_arm(self):
         """
@@ -67,7 +68,8 @@ class TeacherControl:
         Signal given disciples (ids) to start recording.
         """
         self.create_signal(ids, prefix="record_",
-                state=TeacherControl.STATE_RECORD_SENT)
+                state=TeacherControl.STATE_RECORD_SENT,
+                precond=self.arm_verified)
 
     def end_record(self, ids):
         """
@@ -79,11 +81,27 @@ class TeacherControl:
             self.remove_file('record_'+id)
             self.states[self.disciples.index(id)] |= TeacherControl.STATE_RECORD_END
 
-    def create_signal(self, ids, prefix, state):
+    def create_signal(self, ids, prefix, state, precond=None):
+        """
+        Creates a signal (i.e. file) for all ids and set their state.
+
+        precond is a function each disciple needs to meet for a
+        signal to be sent.
+        """
+
+        if precond is None:
+            # no preconditions
+            precond = lambda : True
+
         for id in ids:
             if id not in self.disciples:
                 raise Exception("TeacherControl: " +
                         "attempted to signal unknown id "+id)
+
+            i = self.disciples.index(id)
+            if not precond(self.states[i]):
+                # precondition not met, skip this id
+                continue
 
             # touch/create signal file
             try: 
@@ -97,11 +115,14 @@ class TeacherControl:
 
 
     def search_id(self, prefix):
+        """
+        Return ids in dir with prefix.
+        """
         return [self.get_id(file) for file in self.search(prefix)]
 
     def search(self, prefix):
         """
-        Returns files in dir with prefix.
+        Return files in dir with prefix.
         """
 
         files = []
@@ -114,7 +135,11 @@ class TeacherControl:
         return files
 
     def reset(self, ids=None):
-        """Reset state of disciple(s)."""
+        """
+        Reset state of disciples.
+
+        ids can be a string or an iterable.
+        """
 
         if ids is None:
             # reset all disciples
@@ -140,8 +165,7 @@ class TeacherControl:
     def __str__(self):
         s = ""
         for id, state in zip(self.disciples, self.states):
-            s += "id: " + id + "\n"
-            s += "state: " + str(state) + "\n"
+            s += id + " (state: " + str(state) + ")\n"
             if self.exist_verified(state):
                 s += "    Existence verified.\n"
             if self.arm_sent(state):
