@@ -16,10 +16,6 @@ class TeacherControl:
         self.disciples = []     # unique identifier (e.g. MAC addr)
         self.states = []        # state of each disciple
     
-    def reset(self):
-        """Reset states of all disciples."""
-        self.states = [0x0 * len(self.states)]
-
     def verify_exist(self):
         """
         Finds and verifies the existence of disciples.
@@ -116,6 +112,20 @@ class TeacherControl:
                 # valid prefix and not a directory
                 files.append(self.dir + file)
         return files
+
+    def reset(self, ids=None):
+        """Reset state of disciple(s)."""
+
+        if ids is None:
+            # reset all disciples
+            self.states = [0x0 * len(self.states)]
+        elif type(ids) == str:
+            # reset one disciple
+            self.states[self.disciples.index(ids)] = 0x0
+        elif type(ids) == list:
+            # reset a list of disciples
+            for id in ids:
+                self.states[self.disciples.index(id)] = 0x0
 
     def remove_file(self, file):
         os.remove(os.path.join(self.dir, file))
