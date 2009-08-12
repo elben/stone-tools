@@ -162,10 +162,31 @@ class TeacherControl:
         """Returns True if TeacherControl is still in a valid state."""
         return len(self.disciples) == len(self.states)
 
+    def status_str(self, id):
+        s = ""
+        try:
+            i = self.disciples.index(id)
+        except:
+            return s
+        state = self.states[i]
+        
+        s += id + ": "
+        if self.exist_verified(state):
+            s += "Existence verified. "
+        if self.arm_sent(state):
+            s += "Arm sent. "
+        if self.arm_verified(state):
+            s += "Arm verified. "
+        if self.record_sent(state):
+            s += "Record sent. "
+        if self.record_end(state):
+            s += "Record end. "
+        return s
+
     def __str__(self):
         s = ""
         for id, state in zip(self.disciples, self.states):
-            s += id + " (state: " + str(state) + ")\n"
+            s += id + ":"
             if self.exist_verified(state):
                 s += "    Existence verified.\n"
             if self.arm_sent(state):
