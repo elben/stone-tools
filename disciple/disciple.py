@@ -10,8 +10,12 @@ nfs_dir = "/teacher"
 hdpvr_device = "video0"
 video_prefix = "disciple_"
 
-arm_file = nfs_dir + "/arm_"
-record_file = nfs_dir + "/record_"
+exist_file = os.path.join(nfs_dir, "exist_")
+exist_verified_file = os.path.join(nfs_dir, "exist_verified_")
+arm_file = os.path.join(nfs_dir, "arm_")
+arm_verified_file = os.path.join(nfs_dir, "arm_verified_")
+record_file = os.path.join(nfs_dir, "record_")
+record_verified_file = os.path.join(nfs_dir, "record_verified_")
 
 def main():
     while True:
@@ -42,79 +46,65 @@ def main():
             print "No suitable MAC adress found, using random file name"
             mac_address = str( random.uniform(100000000000, 999999999999) )
         
-        # create an "exist" file and wait for it to be removed as
-        # confirmation that things will start happening
-        print "Waiting for comfirmation of existence..."
-        try:
-            # create the "exist" file if we can
-            exist_file_name = nfs_dir + "/exist_" + mac_address
-            with open(exist_file_name, "w") as f:
-                f.write("Hello world!")
-        except:
-            # we assume it is already there
-            pass
-        
-        # wait for the file we made to dissappear
-        while True:
-            try:
-                os.stat(exist_file_name)
-            except:
-                print "Existence confirmed"
-                break
-        
+        # send 'exist' signal to let Teacher know disciple exists
+        open(exist_file + mac_address, "a").close()
+
+        # wait for 'exist_verified' signal
+        print "Waiting for 'exist_verified' signal..."
+        while not os.path.isfile(exist_verified_file+mac_address):
+            time.sleep(0.2)
+        print "Existence confirmed."
+
+        os.remove(exist_file + mac_address)  # remove 'exist' signal
+
         # open device for reading and ready a file to save video to
         video_stream = open("/dev/" + hdpvr_device, "r")
-        video_file_name = nfs_dir + "/" + video_prefix + mac_address
+        video_file_name = os.path.join(nfs_dir, video_prefix + mac_address)
         video_file = open(video_file_name, "w")
         
-        armed = get_arm_signal(mac_address)
-        record = False
-        
-        # deal with armed/record states
-        read_size = 1000
-        
         # wait to be armed
+        armed = get_arm_signal(mac_address)
         while not armed:
-            print "Waiting for arm signal..."
+            print "Waiting for 'arm' signal..."
             armed = get_arm_signal(mac_address)
             time.sleep(0.5)
-        print "Got arm signal"
+        print "Got arm signal."
+        # send 'arm_verified' signal
+        open(arm_verified_file + mac_address, "a").close()
         
         # if it's not go-time yet, throw data away but be ready
-        while not record:
-            print "Waiting for record signal..."
-            record = get_record_signal(mac_address)
+        read_size = 1000
+        while not received_record_signal(mac_address):
+            print "Waiting for 'record' signal..."
             video_stream.read(read_size)
         
-        # if it's go-time, write that data out to the file
+        # it's go-time, send a 'record_verified' signal
+        open(record_verified_file + mac_address, "a").close()
         print "Recording to '" + video_file_name "'..."
-        while record:
-            record = get_record_signal(mac_address)
+        while received_record_signal(mac_address):
+            # write data out to the file
             video_file.write(video_stream.read(read_size))
             
         # make sure that if we ever stop recording, we disarm too
         print "Disarming and stopping record..."
         armed = False
+        # remove 'arm_verified' and 'record_verified' signals
+        os.remove(arm_verified_file+mac_address)
+        os.remove(record_verified_file+mac_address)
         
         # close the stream and file
         video_stream.close()
         video_file.close()
         
-        print "Done recording"
+        print "Done recording."
 
 def get_arm_signal(mac_address):
-    try: # try to remove it and return true
-        os.remove(arm_file + mac_address)
-        return True
-    except: # otherwise it hasn't come in yet, so return false
-        return False
+    """Returns True if 'arm' signal exists; False otherwise."""
+    return os.path.isfile(arm_file + mac_address)
 
-def get_record_signal(mac_address):
-    try: # try to remove it and return true
-        os.stat(record_file + mac_address)
-        return True
-    except: # otherwise it hasn't come in yet, so return false
-        return False
+def received_record_signal(mac_address):
+    """Returns True if 'record' signal exists, False otherwise."""
+    return os.path.isfile(record_file + mac_address)
 
 def get_mac_address():
     ifconfig = sp.Popen( ["ifconfig", "-a"], stdout = sp.PIPE )

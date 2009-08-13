@@ -9,9 +9,6 @@ import logging
 import logging.handlers
 import time
 
-
-devnull = open(os.devnull, 'w')
-
 class WGet:
     """
     WGet is an intelligent wrapper around the wget process.

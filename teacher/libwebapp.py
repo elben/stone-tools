@@ -1,15 +1,16 @@
 import os
 
 class TeacherControl:
-    STATE_UNKNOWN = 0x0
-    STATE_LET_RECORD= 0x01
-    STATE_DONT_RECORD= 0x02
+    UNKNOWN = 0x0
+    LET_RECORD= 0x01
+    DONT_RECORD= 0x02
 
-    STATE_EXIST_VERIFIED = 0x10
-    STATE_ARM_SENT = 0x20
-    STATE_ARM_VERIFIED = 0x40
-    STATE_RECORD_SENT = 0x80
-    STATE_RECORD_END = 0x100
+    EXIST_VERIFIED = 0x10
+    ARM_SENT = 0x20
+    ARM_VERIFIED = 0x40
+    RECORD_SENT = 0x80
+    RECORD_VERIFIED = 0x100
+    RECORD_END = 0x200
     
     def __init__(self, dir="/var/www"):
         self.dir = dir
@@ -22,6 +23,7 @@ class TeacherControl:
 
         Looks for 'exist' files, extracts the unique id, and
         adds that new disciple to the list of known disciples.
+        Then, remove the 'exist' files and create 'exist_verified' files.
         """
 
         for file in self.search(prefix="exist_"):
@@ -29,90 +31,111 @@ class TeacherControl:
             if id not in self.disciples:
                 # found new disciple
                 self.disciples.append(id)
-                self.states.append(TeacherControl.STATE_EXIST_VERIFIED)
+                self.states.append(TeacherControl.EXIST_VERIFIED)
             else:
                 # disciple's existence already known for some reason;
                 # attempt to handle error
                 i = self.disciples.index(id)
-                self.states[i] |= TeacherControl.STATE_EXIST_VERIFIED
+                self.states[i] |= TeacherControl.EXIST_VERIFIED
             # signal to disciple that webapp verified existence
-            self.remove_file(file)
+            self.create_signal(id, prefix="exist_verified_")
 
     def signal_arm(self, ids):
         """
         Signal given disciples (ids) to arm for the glorious battle.
 
-        Creates 'arm' files and sets STATE_ARM_SENT.
+        Creates 'arm' files and sets ARM_SENT.
         """
-        self.create_signal(ids, prefix="arm_",
-                state=TeacherControl.STATE_ARM_SENT,
+        self.create_signals(ids, prefix="arm_",
+                state=TeacherControl.ARM_SENT,
                 precond=self.exist_verified)
 
     def verify_arm(self):
         """
         Verify armed disciples.
 
-        If an arm signal was sent to a disciple, and the 'arm' file
-        no longer exists, then disciple is armed, so set state to armed.
+        If an arm signal was sent to a disciple and the 'arm_verified' file
+        exists, then disciple is armed, so set state to armed.
         """
         for i in range(len(self.disciples)):
             id = self.disciples[i]
             state = self.states[i]
-            if self.arm_sent(state) and not self.file_exists('arm_'+id):
-                # arm signal was sent, and now 'arm' file does not
-                # exist; thus, disciple armed
-                self.states[i] |= TeacherControl.STATE_ARM_VERIFIED
+            if self.arm_sent(state) and self.file_exists('arm_verified_'+id):
+                # disciple is armed
+                self.states[i] |= TeacherControl.ARM_VERIFIED
+
+                # remove 'arm' signal
+                self.remove_signal('arm_'+id)
 
     def signal_record(self, ids):
         """
         Signal given disciples (ids) to start recording.
         """
-        self.create_signal(ids, prefix="record_",
-                state=TeacherControl.STATE_RECORD_SENT,
+        self.create_signals(ids, prefix="record_",
+                state=TeacherControl.RECORD_SENT,
                 precond=self.arm_verified)
+
+    def verify_record(self):
+        """
+        Verify recording disciples.
+
+        If webapp received 'arm_verified' and 'record_verified' signals,
+        then disciple is recording.
+        """
+        for i in range(len(self.disciples)):
+            id = self.disciples[i]
+            state = self.states[i]
+            if (self.arm_verified(state) and
+                    self.file_exists('record_verified_'+id)):
+                # disciple is recording
+                self.states[i] |= TeacherControl.RECORD_VERIFIED
 
     def end_record(self, ids):
         """
-        Signal given disciples (ids) to stop recording.
-
-        Removes 'record' files.
+        Signal given disciples (ids) to stop recording by removing 'record'
+        signals.
         """
         for id in ids:
-            self.remove_file('record_'+id)
-            self.states[self.disciples.index(id)] |= TeacherControl.STATE_RECORD_END
+            self.states[self.disciples.index(id)] |= TeacherControl.RECORD_END
+            self.remove_signal('record_'+id)
+            self.remove_signal('exist_verified'+id)
 
-    def create_signal(self, ids, prefix, state, precond=None):
+    def create_signals(self, ids, prefix, state=None, precond=None):
         """
         Creates a signal (i.e. file) for all ids and set their state.
 
         precond is a function each disciple needs to meet for a
         signal to be sent.
         """
-
-        if precond is None:
-            # no preconditions
-            precond = lambda : True
-
         for id in ids:
-            if id not in self.disciples:
-                raise Exception("TeacherControl: " +
-                        "attempted to signal unknown id "+id)
+            self.create_signal(id, prefix, state, precond)
+    
+    def create_signal(self, id, prefix, state=None, precond=None):
+        """
+        Creates a signal (i.e. file) for id and set its state.
 
-            i = self.disciples.index(id)
-            if not precond(self.states[i]):
-                # precondition not met, skip this id
-                continue
+        precond is a function that disciple needs to meet for a
+        signal to be sent.
+        """
+        if id not in self.disciples:
+            raise Exception("TeacherControl: " +
+                    "attempted to signal unknown id "+id)
 
-            # touch/create signal file
-            try: 
-                open(os.path.join(self.dir, prefix+id), 'a').close()
-            except:
-                raise Exception("TeacherControl: " + 
-                    "failed to create '"+prefix+"' file for " + id)
+        i = self.disciples.index(id)
+        if precond is not None and not precond(self.states[i]):
+            # precondition not met, skip this id
+            continue
 
+        # touch/create signal file
+        try: 
+            open(os.path.join(self.dir, prefix+id), 'a').close()
+        except:
+            raise Exception("TeacherControl: " + 
+                "failed to create '"+prefix+"' file for " + id)
+
+        if state is not None:
             # flag the state
             self.states[self.disciples.index(id)] |= state
-
 
     def search_id(self, prefix):
         """
@@ -152,7 +175,7 @@ class TeacherControl:
             for id in ids:
                 self.states[self.disciples.index(id)] = 0x0
 
-    def remove_file(self, file):
+    def remove_signal(self, file):
         os.remove(os.path.join(self.dir, file))
 
     def file_exists(self, file):
@@ -224,20 +247,24 @@ class TeacherControl:
 
     @staticmethod
     def exist_verified(state):
-        return state & TeacherControl.STATE_EXIST_VERIFIED != 0
+        return state & TeacherControl.EXIST_VERIFIED != 0
 
     @staticmethod
     def arm_sent(state):
-        return state & TeacherControl.STATE_ARM_SENT != 0
+        return state & TeacherControl.ARM_SENT != 0
 
     @staticmethod
     def arm_verified(state):
-        return state & TeacherControl.STATE_ARM_VERIFIED != 0
+        return state & TeacherControl.ARM_VERIFIED != 0
 
     @staticmethod
     def record_sent(state):
-        return state & TeacherControl.STATE_RECORD_SENT != 0
+        return state & TeacherControl.RECORD_SENT != 0
+
+    @staticmethod
+    def record_verified(state):
+        return state & TeacherControl.RECORD_VERIFIED != 0
 
     @staticmethod
     def record_end(state):
-        return state & TeacherControl.STATE_RECORD_END != 0
+        return state & TeacherControl.RECORD_END != 0
