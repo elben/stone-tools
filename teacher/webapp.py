@@ -5,7 +5,7 @@ import cgi
 import cgitb
 
 cgitb.enable()
-app = TeacherControl(dir=".")
+app = TeacherControl(dir="signals")
 form = cgi.FieldStorage()
 
 ###############
@@ -19,7 +19,12 @@ if form.has_key("arm"):
 
 print "<h1>Stone Tools: webapp</h1>"
 
-app.verify_exist()
+#app.verify_exist()
+print "<h2>Status</h2>"
+for id in app.disciples:
+    print app.status_str(id)
+    print "<br />"
+
 print """
     <h2>Arm Disciples</h2>
     <form name="teachercontrol" method="post" action="webapp.py">
@@ -34,9 +39,3 @@ print """
     <input type="submit" value="Arm">
     </form>
 """
-
-print "<h2>Status</h2>"
-for id in app.disciples:
-    print app.status_str(id)
-    print "<br />"
-

@@ -16,6 +16,7 @@ class TeacherControl:
         self.dir = dir
         self.disciples = []     # unique identifier (e.g. MAC addr)
         self.states = []        # state of each disciple
+        self.mine_signals()
     
     def verify_exist(self):
         """
@@ -124,7 +125,7 @@ class TeacherControl:
         i = self.disciples.index(id)
         if precond is not None and not precond(self.states[i]):
             # precondition not met, skip this id
-            continue
+            return
 
         # touch/create signal file
         try: 
@@ -136,6 +137,47 @@ class TeacherControl:
         if state is not None:
             # flag the state
             self.states[self.disciples.index(id)] |= state
+
+    def mine_signals(self):
+        """
+        Search through self.dir for signals and set the states of disciples
+        to signals received.
+
+        WARNING: preconditions as specified in the protocol is not checked.
+        For example, a 'arm_verified' signal may be present, but not a
+        'exist_verified'. In this case, mine_signals() will still harvest
+        the 'arm_verified' signal.
+        """
+
+        # reset disciples if need be
+        if self.disciples != []:
+            self.disciples = []
+        if self.states != []:
+            self.states = []
+
+        for id in self.search_id(prefix='exist_verified_'):
+            if id not in self.disciples:
+                self.disciples.append(id)
+                self.states.append(TeacherControl.EXIST_VERIFIED)
+            else:
+                i = self.disciples.index(id)
+                self.states[i] |= TeacherControl.EXIST_VERIFIED
+
+        for id in self.search_id(prefix='arm_verified_'):
+            if id not in self.disciples:
+                self.disciples.append(id)
+                self.states.append(TeacherControl.ARM_VERIFIED)
+            else:
+                i = self.disciples.index(id)
+                self.states[i] |= TeacherControl.ARM_VERIFIED
+
+        for id in self.search_id(prefix='record_verified_'):
+            if id not in self.disciples:
+                self.disciples.append(id)
+                self.states.append(TeacherControl.RECORD_VERIFIED)
+            else:
+                i = self.disciples.index(id)
+                self.states[i] |= TeacherControl.RECORD_VERIFIED
 
     def search_id(self, prefix):
         """
@@ -202,6 +244,8 @@ class TeacherControl:
             s += "Arm verified. "
         if self.record_sent(state):
             s += "Record sent. "
+        if self.record_verified(state):
+            s += "Record verified. "
         if self.record_end(state):
             s += "Record end. "
         return s
