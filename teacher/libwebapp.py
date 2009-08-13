@@ -91,7 +91,7 @@ class TeacherControl:
                 # disciple is recording
                 self.states[i] |= TeacherControl.RECORD_VERIFIED
 
-    def end_record(self, ids):
+    def signal_end_record(self, ids):
         """
         Signal given disciples (ids) to stop recording by removing 'record'
         signals.
