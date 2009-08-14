@@ -99,7 +99,7 @@ class TeacherControl:
         for id in ids:
             self.states[self.disciples.index(id)] |= TeacherControl.RECORD_END
             self.remove_signal('record_'+id)
-            self.remove_signal('exist_verified'+id)
+            self.remove_signal('record_verified_'+id)
 
     def create_signals(self, ids, prefix, state=None, precond=None):
         """

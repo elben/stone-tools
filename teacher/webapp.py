@@ -40,6 +40,7 @@ if form.has_key("endrecord"):
 ################
 print "<h1>Stone Tools: webapp</h1>"
 
+# receive 'exist' signals
 app.verify_exist()
 print "<h2>Status</h2>"
 for id in app.disciples:
