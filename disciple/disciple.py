@@ -80,7 +80,7 @@ def main():
         
         # it's go-time, send a 'record_verified' signal
         open(record_verified_file + mac_address, "a").close()
-        print "Recording to '" + video_file_name "'..."
+        print "Recording to " + video_file_name + "'..."
         while received_record_signal(mac_address):
             # write data out to the file
             video_file.write(video_stream.read(read_size))
