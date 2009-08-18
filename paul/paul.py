@@ -37,7 +37,7 @@ while True:
     
     # update file size (not too often)
     prev_fs = fs
-    fs = wget.size_extern()
+    fs = wget.size_remote()
 
     # if the file we're trying to download is 50% smaller than the last one
     if fs < FS_DIFF * prev_fs:
