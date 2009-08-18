@@ -88,9 +88,17 @@ def main():
         # make sure that if we ever stop recording, we disarm too
         print "Disarming and stopping record..."
         armed = False
+        
         # remove 'arm_verified' and 'record_verified' signals
-        os.remove(arm_verified_file+mac_address)
-        os.remove(record_verified_file+mac_address)
+        try:
+            os.remove(arm_verified_file + mac_address)
+        except:
+            pass
+        
+        try:
+            os.remove(record_verified_file+mac_address)
+        except:
+            pass
         
         # close the stream and file
         video_stream.close()
