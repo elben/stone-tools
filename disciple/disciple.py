@@ -3,7 +3,7 @@ import os
 import time
 import random
 
-teacher_ip = "192.168.1.100"
+teacher_ip = "10.100.1.242"
 remote_dir = "/var/www"
 nfs_dir = "/teacher"
 
