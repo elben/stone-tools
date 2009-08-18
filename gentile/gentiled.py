@@ -4,7 +4,7 @@ import sys
 import subprocess as sp
 
 #url = "http://localhost:8888/elbenshira/d/"
-url = "http://192.168.1.101"
+url = "http://10.100.1.243"
 remote_file = "sermon.ts"
 local_file = "sermon.ts"
 

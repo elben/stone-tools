@@ -3,7 +3,7 @@ import os
 import time
 
 # amount the new file must differ by to be considered a new sermon
-FS_DIFF = .5
+FS_DIFF = 0.5
 
 # how many sermons we've downloaded so far
 sermon_num = 0
@@ -14,7 +14,7 @@ prev_fs = 0
 
 symlink_file = "sermon_symlink"
 local_symlink = "sermon.ts"
-url = "http://192.168.1.100/"
+url = "http://10.100.1.242/"
 
 web_dir = "/var/www/"
 prefix = time.strftime("%m-%d-%Y_%H:%M_")
