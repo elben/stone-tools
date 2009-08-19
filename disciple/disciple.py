@@ -49,13 +49,25 @@ def main():
         # send 'exist' signal to let Teacher know disciple exists
         open(exist_file + mac_address, "a").close()
 
+#         # wait for 'exist_verified' signal
+#         print "Waiting for 'exist_verified' signal..."
+#         while not os.path.isfile(exist_verified_file + mac_address):
+#             time.sleep(0.2)
+#         print "Existence confirmed."
+
+#         os.remove(exist_file + mac_address)  # remove 'exist' signal
+
         # wait for 'exist_verified' signal
         print "Waiting for 'exist_verified' signal..."
-        while not os.path.isfile(exist_verified_file+mac_address):
+        while True:
+            try:
+                os.stat(exist_verified_file + mac_address)
+                break
+            except:
+                pass
+            
             time.sleep(0.2)
         print "Existence confirmed."
-
-        os.remove(exist_file + mac_address)  # remove 'exist' signal
 
         # open device for reading and ready a file to save video to
         video_stream = open("/dev/" + hdpvr_device, "r")
@@ -64,9 +76,10 @@ def main():
         
         # wait to be armed
         armed = get_arm_signal(mac_address)
+        print "Waiting for 'arm' signal..."
         while not armed:
-            print "Waiting for 'arm' signal..."
             armed = get_arm_signal(mac_address)
+            print
             time.sleep(0.5)
         print "Got arm signal."
         # send 'arm_verified' signal
@@ -74,8 +87,8 @@ def main():
         
         # if it's not go-time yet, throw data away but be ready
         read_size = 1024 * 1024 # 1MB
+        print "Waiting for 'record' signal..."
         while not received_record_signal(mac_address):
-            print "Waiting for 'record' signal..."
             video_stream.read(read_size)
         
         # it's go-time, send a 'record_verified' signal
