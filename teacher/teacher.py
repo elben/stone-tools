@@ -2,7 +2,7 @@ import os
 import time
 
 video_dir = "/var/www/"
-video_prefix = "disciple_"
+video_prefix = "video_"
 
 def main():
     # initialize 
@@ -13,9 +13,10 @@ def main():
     prev_symlink = None
     symbolic_link = None
     
+    print "Starting program..."
     while True:
         # done at beginning to prevent spamming messages via 'continue'
-        sleep_time = 10
+        sleep_time = 15
         time.sleep(sleep_time)
         
         # keep previous sizes

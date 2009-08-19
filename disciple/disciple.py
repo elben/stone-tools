@@ -8,7 +8,7 @@ remote_dir = "/var/www"
 nfs_dir = "/teacher"
 
 hdpvr_device = "video0"
-video_prefix = "disciple_"
+video_prefix = "video_"
 
 exist_file = os.path.join(nfs_dir, "exist_")
 exist_verified_file = os.path.join(nfs_dir, "exist_verified_")
