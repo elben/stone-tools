@@ -16,7 +16,7 @@ def main():
     print "Starting program..."
     while True:
         # done at beginning to prevent spamming messages via 'continue'
-        sleep_time = 15
+        sleep_time = 2
         time.sleep(sleep_time)
         
         # keep previous sizes

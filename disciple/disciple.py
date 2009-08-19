@@ -48,45 +48,34 @@ def main():
         
         # send 'exist' signal to let Teacher know disciple exists
         open(exist_file + mac_address, "a").close()
-
-#         # wait for 'exist_verified' signal
-#         print "Waiting for 'exist_verified' signal..."
-#         while not os.path.isfile(exist_verified_file + mac_address):
-#             time.sleep(0.2)
-#         print "Existence confirmed."
-
-#         os.remove(exist_file + mac_address)  # remove 'exist' signal
-
+        
         # wait for 'exist_verified' signal
         print "Waiting for 'exist_verified' signal..."
-        while True:
-            try:
-                os.stat(exist_verified_file + mac_address)
-                break
-            except:
-                pass
-            
+        while not os.path.isfile(exist_verified_file + mac_address):
             time.sleep(0.2)
         print "Existence confirmed."
-
-        # open device for reading and ready a file to save video to
-        video_stream = open("/dev/" + hdpvr_device, "r")
+        
+        os.remove(exist_file + mac_address)  # remove 'exist' signal
+        
         video_file_name = os.path.join(nfs_dir, video_prefix + mac_address)
-        video_file = open(video_file_name, "w")
         
         # wait to be armed
         armed = get_arm_signal(mac_address)
         print "Waiting for 'arm' signal..."
         while not armed:
             armed = get_arm_signal(mac_address)
-            print
-            time.sleep(0.5)
+            time.sleep(0.2)
         print "Got arm signal."
+        
+        # open device for reading and ready a file to save video to
+        video_stream = open("/dev/" + hdpvr_device, "r")
+        video_file = open(video_file_name, "w")
+        
         # send 'arm_verified' signal
         open(arm_verified_file + mac_address, "a").close()
         
         # if it's not go-time yet, throw data away but be ready
-        read_size = 1024 * 1024 # 1MB
+        read_size = 1024 * 400 # 400KB
         print "Waiting for 'record' signal..."
         while not received_record_signal(mac_address):
             video_stream.read(read_size)
@@ -97,6 +86,8 @@ def main():
         while received_record_signal(mac_address):
             # write data out to the file
             video_file.write(video_stream.read(read_size))
+            video_file.flush()
+            os.fsync(video_file.fileno())
             
         # make sure that if we ever stop recording, we disarm too
         print "Disarming and stopping record..."
