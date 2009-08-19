@@ -30,7 +30,7 @@ def main():
             continue
         else:
             print "NFS mounted"
-
+        
         # look in /dev for video device
         if not hdpvr_device_exists(hdpvr_device):
             print ("Could not find '/dev/" + hdpvr_device +
@@ -47,13 +47,13 @@ def main():
             mac_address = str( random.uniform(100000000000, 999999999999) )
         
         # send 'exist' signal to let Teacher know disciple exists
-        open(exist_file + mac_address, "a").close()
+        open(exist_file + mac_address, "a").close() # equivalent to 'touch'
         
         # wait for 'exist_verified' signal
         print "Waiting for 'exist_verified' signal..."
         while not os.path.isfile(exist_verified_file + mac_address):
             time.sleep(0.2)
-        print "Existence confirmed."
+        print "Existence confirmed"
         
         os.remove(exist_file + mac_address)  # remove 'exist' signal
         
@@ -65,7 +65,7 @@ def main():
         while not armed:
             armed = get_arm_signal(mac_address)
             time.sleep(0.2)
-        print "Got arm signal."
+        print "Got arm signal"
         
         # open device for reading and ready a file to save video to
         video_stream = open("/dev/" + hdpvr_device, "r")
@@ -79,16 +79,21 @@ def main():
         print "Waiting for 'record' signal..."
         while not received_record_signal(mac_address):
             video_stream.read(read_size)
-        
+        print "Got record signal"
+            
         # it's go-time, send a 'record_verified' signal
+        print ""
         open(record_verified_file + mac_address, "a").close()
+        
         print "Recording to " + video_file_name + "'..."
         while received_record_signal(mac_address):
             # write data out to the file
             video_file.write(video_stream.read(read_size))
+            
+            # force the NFS server to update file attributes
             video_file.flush()
             os.fsync(video_file.fileno())
-            
+        
         # make sure that if we ever stop recording, we disarm too
         print "Disarming and stopping record..."
         armed = False
@@ -96,10 +101,6 @@ def main():
         # remove 'arm_verified' and 'record_verified' signals
         try:
             os.remove(arm_verified_file + mac_address)
-        except:
-            pass
-        
-        try:
             os.remove(record_verified_file+mac_address)
         except:
             pass
@@ -109,7 +110,7 @@ def main():
         video_file.close()
         
         print "Done recording."
-
+    
 def get_arm_signal(mac_address):
     """Returns True if 'arm' signal exists; False otherwise."""
     return os.path.isfile(arm_file + mac_address)
@@ -150,15 +151,6 @@ def hdpvr_device_exists(device):
     if str(device) in dev_dir:
         return True
     return False
-
-# def hdpvr_attached(device_name):
-#     lsusb = sp.Popen( ["lsusb"], stdout = sp.PIPE )
-    
-#     num_found = ( lsusb.communicate()[0] ).count( str(device_name) )
-    
-#     if num_found > 0:
-#         return True
-#     return False
 
 def nfs_mounted(ip):
     with open("/proc/mounts") as file:
