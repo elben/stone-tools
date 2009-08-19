@@ -73,7 +73,7 @@ def main():
         open(arm_verified_file + mac_address, "a").close()
         
         # if it's not go-time yet, throw data away but be ready
-        read_size = 1000
+        read_size = 1024 * 1024 # 1MB
         while not received_record_signal(mac_address):
             print "Waiting for 'record' signal..."
             video_stream.read(read_size)
