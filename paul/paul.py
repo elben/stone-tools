@@ -6,7 +6,7 @@ import socket
 # amount the new file must differ by to be considered a new sermon
 FS_DIFF = 0.5
 
-# URL of teacher
+# url of teacher
 URL = "http://10.100.1.242/"
 
 # various file and directory names
@@ -15,7 +15,7 @@ SERMON_DIR = "/sermons"
 TEACHER_SYMLINK = "sermon_symlink"
 
 # get the ip of the local machine, to put in pointer file
-IP = socket.gethostbyname(socket.gethostname())
+IP = socket.gethostbyname( socket.gethostname() )
 
 def main():
     # create sermon directory if it doesn't exist

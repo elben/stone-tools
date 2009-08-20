@@ -19,7 +19,13 @@ class WGet:
     def __init__(self, remote_dir, remote_file, local_file=None,
             logger=None, log_file='logs/stone-gentile.log',
             delay_wget=2, delay_http=5, delay_log=1):
-
+        
+        # make sure we have a log directory so we don't crash (UBER ANNOYING)
+        try:
+            os.mkdir("logs")
+        except:
+            pass
+        
         self.wget_proc = None
 
         # set up logging
