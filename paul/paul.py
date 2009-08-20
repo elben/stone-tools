@@ -1,6 +1,7 @@
 import gently
 import os
 import time
+import socket
 
 # amount the new file must differ by to be considered a new sermon
 FS_DIFF = 0.5
@@ -13,6 +14,9 @@ WEB_DIR = "/var/www"
 SERMON_DIR = "/sermons"
 TEACHER_SYMLINK = "sermon_symlink"
 
+# get the ip of the local machine, to put in pointer file
+IP = socket.gethostbyname(socket.gethostname())
+
 def main():
     # create sermon directory if it doesn't exist
     try:
@@ -23,7 +27,7 @@ def main():
     
     # various file names
     sermon_num = 1
-    prefix = time.strftime("%m-%d-%Y_%H:%M_")
+    prefix = time.strftime("%m-%d-%Y_%H%M_")
     filename = prefix + str(sermon_num)
     sermon_filename = WEB_DIR + SERMON_DIR + "/" + filename + ".ts"
     
@@ -38,9 +42,9 @@ def main():
             print "Waiting for teacher to create symlink..."
             time.sleep(0.5)
     
-    print "Starting download to", sermon_filename
+    print "Starting download to", "'" + sermon_filename + "'"
     print "Creating pointer file in '" + WEB_DIR + "'"
-    create_pointer_file(WEB_DIR, SERMON_DIR, filename)
+    create_pointer_file(WEB_DIR, SERMON_DIR, filename, IP)
     
     # main loop
     fs = wget.size_remote()
@@ -58,7 +62,7 @@ def main():
             # create a new file name for it
             sermon_num += 1
             
-            prefix = time.strftime("%m-%d-%Y_%H:%M_")
+            prefix = time.strftime("%m-%d-%Y_%H%M_")
             filename = prefix + str(sermon_num)
             sermon_filename = WEB_DIR + SERMON_DIR + "/" + filename + ".ts"
             
@@ -72,7 +76,7 @@ def main():
             print "Creating pointer file in '" + WEB_DIR + "'"
         
             # create the pointer file, which is downloaded by gentile
-            create_pointer_file(WEB_DIR, SERMON_DIR, filename)
+            create_pointer_file(WEB_DIR, SERMON_DIR, filename, IP)
         
             # reconnect since the file download location changed
             while True:
@@ -89,9 +93,17 @@ def main():
         wget.download(autokill = True)
         wget.log_status()
 
-def create_pointer_file(web_dir, sermon_dir, name):
+def create_pointer_file(web_dir, sermon_dir, name, ip):
     with open(web_dir + "/" + name + ".pt", "w") as file:
-        file.write(web_dir + sermon_dir + "/" + name + ".ts" + "\n")
+        # first line is server ip and directory
+        url = "http://" + ip + sermon_dir + "/" + "\n"
+        
+        # second is the file in that directory
+        filename = name + ".ts" + "\n"
+        
+        str = url + filename
+        
+        file.write(str)
 
 if __name__ == "__main__":
     main()
