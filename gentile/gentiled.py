@@ -3,16 +3,34 @@ import time
 import sys
 import subprocess as sp
 
-#url = "http://localhost:8888/elbenshira/d/"
-url = "http://10.100.1.243/"
-remote_file = "sermon.ts"
-local_file = "sermon.ts"
+LOCAL_FILE = "sermon.ts"
 
-def main(argv=None):
+def main(argv = None):
     if argv is None:
         argv = sys.argv
-
-    wget = gently.WGet(url, remote_file, local_file, delay_wget=5)
+    
+    # get the downoad location from the pointer file we were passed
+    try:
+        with open(argv[0], "r") as file:
+            # get data from pointer file
+            file_contents = file.readlines()
+            
+            # first line is the server url and directory
+            url = file_contents[0].strip()
+            
+            # first line is the sermon video location
+            remote_file = file_contents[1].strip()
+    except:
+        print "Failed to parse download location from pointer file!"
+        return 1
+    
+    # remove previously played file
+    try:
+        os.remove(LOCAL_FILE)
+    except:
+        pass
+    
+    wget = gently.WGet(url, remote_file, LOCAL_FILE, delay_wget=5)
     
     mplayer = None
     mplayer_size = 25000
@@ -23,7 +41,7 @@ def main(argv=None):
         
         if ( (mplayer == None or mplayer.poll() != None)
              and wget.size_local() > mplayer_size ):
-            mplayer = sp.Popen( ["mplayer", local_file] )
+            mplayer = sp.Popen( ["mplayer", LOCAL_FILE] )
         
         wget.log_status()
 
