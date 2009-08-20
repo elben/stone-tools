@@ -1,8 +1,8 @@
 import os
 import time
 
-video_dir = "/var/www/"
-video_prefix = "video_"
+VIDEO_DIR = "/var/www/"
+VIDEO_PREFIX = "video_"
 
 def main():
     # initialize 
@@ -24,7 +24,7 @@ def main():
         previous.extend(current)
         
         # get files and their sizes from the directory
-        current = get_video_files(video_dir, video_prefix)
+        current = get_video_files(VIDEO_DIR, VIDEO_PREFIX)
         
         if current == []:
             print "Waiting for video files..."
@@ -58,7 +58,7 @@ def main():
             print "No good files found!"
             
         # update symlink
-        link_name = video_dir + "sermon_symlink"
+        link_name = VIDEO_DIR + "sermon_symlink"
         prev_symlink = symbolic_link
         symbolic_link = update_symlink(link_name, symbolic_link, current,
                                        bad_files)
