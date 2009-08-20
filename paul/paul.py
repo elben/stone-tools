@@ -61,7 +61,6 @@ def main():
             prefix = time.strftime("%m-%d-%Y_%H:%M_")
             filename = prefix + str(sermon_num)
             sermon_filename = WEB_DIR + SERMON_DIR + "/" + filename + ".ts"
-            pointer_filename = WEB_DIR + "/" + filename
             
             # kill the old wget to start a new one
             try:
@@ -92,7 +91,7 @@ def main():
 
 def create_pointer_file(web_dir, sermon_dir, name):
     with open(web_dir + "/" + name + ".pt", "w") as file:
-        file.write(web_dir + sermon_dir + "/" + name + "\n")
+        file.write(web_dir + sermon_dir + "/" + name + ".ts" + "\n")
 
 if __name__ == "__main__":
     main()
