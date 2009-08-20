@@ -39,6 +39,7 @@ if form.has_key("endrecord"):
 # Intro
 ################
 print "<h1>Stone Tools: webapp</h1>"
+print "<hr>"
 
 # receive 'exist' signals
 app.verify_exist()
@@ -52,9 +53,9 @@ for id in app.disciples:
 ################
 
 print """
-    <h2>Arm</h2>
-    <form name="armcontrol" method="post" action="webapp.py">
-"""
+      <h2>Arm</h2>
+      <form name="armcontrol" method="post" action="webapp.py">
+      """
 
 for id, state in zip(app.disciples, app.states):
     if not app.arm_verified(state) and app.exist_verified(state):
