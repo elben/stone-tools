@@ -5,64 +5,95 @@ import time
 # amount the new file must differ by to be considered a new sermon
 FS_DIFF = 0.5
 
-# how many sermons we've downloaded so far
-sermon_num = 0
+# URL of teacher
+URL = "http://10.100.1.242/"
 
-# file size storage, for comparison
-fs = 0
-prev_fs = 0
+# various file and directory names
+WEB_DIR = "/var/www"
+SERMON_DIR = "/sermons"
+TEACHER_SYMLINK = "sermon_symlink"
 
-symlink_file = "sermon_symlink"
-local_symlink = "sermon.ts"
-url = "http://10.100.1.242/"
-
-web_dir = "/var/www/"
-prefix = time.strftime("%m-%d-%Y_%H:%M_")
-filename = web_dir + prefix + str(sermon_num)
-
-wget = gently.WGet(url, symlink_file, filename, delay_wget=5)
-wget.connect()
-
-try:
-    os.remove(web_dir + local_symlink)
-except:
-    pass
-
-os.symlink(filename, web_dir + local_symlink)
-
-print "Starting download to", filename
-while True:
-    # keep from burning cycles and spamming server with fs requests
-    time.sleep(2)
+def main():
+    # create sermon directory if it doesn't exist
+    try:
+        os.mkdir(WEB_DIR + SERMON_DIR)
+        print "Creating sermon directory in", "'" +  WEB_DIR + SERMON_DIR + "'"
+    except:
+        pass
     
-    # update file size (not too often)
-    prev_fs = fs
-    fs = wget.size_remote()
-
-    # if the file we're trying to download is 50% smaller than the last one
-    if fs < FS_DIFF * prev_fs:
-        # create a new file name for it
-        sermon_num += 1
-        prefix = time.strftime("%m-%d-%Y_%H:%M_")
-        filename = web_dir + prefix + str(sermon_num)
-        
-        # start a new wget and symlink to the new file
-        wget.terminate()
-        
-        print "New sermon started remotely, downloading to", filename
-        
-        wget = gently.WGet(url, symlink_file, filename, delay_wget=5)
-        
+    # various file names
+    sermon_num = 1
+    prefix = time.strftime("%m-%d-%Y_%H:%M_")
+    filename = prefix + str(sermon_num)
+    sermon_filename = WEB_DIR + SERMON_DIR + "/" + filename + ".ts"
+    
+    # create the object that will download, but only if the symlink exists
+    while True:
         try:
-            os.remove(web_dir + local_symlink)
+            wget = gently.WGet(URL, TEACHER_SYMLINK,
+                               sermon_filename, delay_wget = 5)
+            wget.connect()
+            break
         except:
-            pass
-        
-        os.symlink(filename, web_dir + local_symlink)
-        
-        # reconnect since the file download location changed
-        wget.connect()
+            print "Waiting for teacher to create symlink..."
+            time.sleep(0.5)
     
-    # download the file (new or otherwise)
-    wget.download(autokill=True)
-    wget.log_status()
+    print "Starting download to", sermon_filename
+    print "Creating pointer file in '" + WEB_DIR + "'"
+    create_pointer_file(WEB_DIR, SERMON_DIR, filename)
+    
+    # main loop
+    fs = wget.size_remote()
+    while True:
+        # keep from burning cycles and spamming server with fs requests
+        time.sleep(2)
+        
+        # update file size (not too often)
+        prev_fs = fs
+        fs = wget.size_remote()
+
+        # if the file we're trying to download is 50% smaller than the last one
+        # or if there is not a file at all
+        if fs <= FS_DIFF * prev_fs:
+            # create a new file name for it
+            sermon_num += 1
+            
+            prefix = time.strftime("%m-%d-%Y_%H:%M_")
+            filename = prefix + str(sermon_num)
+            sermon_filename = WEB_DIR + SERMON_DIR + "/" + filename + ".ts"
+            pointer_filename = WEB_DIR + "/" + filename
+            
+            # kill the old wget to start a new one
+            try:
+                wget.terminate()
+            except:
+                pass
+            
+            print "Downloading new sermon to ", "'" + sermon_filename + "'"
+            print "Creating pointer file in '" + WEB_DIR + "'"
+        
+            # create the pointer file, which is downloaded by gentile
+            create_pointer_file(WEB_DIR, SERMON_DIR, filename)
+        
+            # reconnect since the file download location changed
+            while True:
+                try:
+                    wget = gently.WGet(URL, TEACHER_SYMLINK,
+                                       sermon_filename, delay_wget = 5)
+                    wget.connect()
+                    break
+                except:
+                    print "Waiting for teacher to create symlink..."
+                    time.sleep(0.5)
+    
+        # download the file (new or otherwise)
+        wget.download(autokill = True)
+        wget.log_status()
+
+def create_pointer_file(web_dir, sermon_dir, name):
+    with open(web_dir + "/" + name + ".pt", "w") as file:
+        file.write(web_dir + sermon_dir + "/" + name + "\n")
+
+if __name__ == "__main__":
+    main()
+
