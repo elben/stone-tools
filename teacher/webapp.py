@@ -6,7 +6,7 @@ import cgitb
 
 cgitb.enable()
 form = cgi.FieldStorage()
-app = TeacherControl(dir="signals")
+app = TeacherControl(dir="/var/www")
 
 ###############
 # neccessary for CGI to work
