@@ -68,7 +68,7 @@ def main():
             print "Symbolic link set to", symbolic_link
             print ""
         else:
-            print "Symbolic link unchanged"
+            print "Symbolic link is", "'" + str(symbolic_link) + "'"
         
 def update_symlink(link_name, cur_link, current_files, bad_files):
     if cur_link in bad_files or cur_link == None:
