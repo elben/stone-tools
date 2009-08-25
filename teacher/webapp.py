@@ -13,8 +13,7 @@ import cgitb
 SIGNALS_DIR = "/var/www"    # path to signals directory
 REFRESH_RATE = 3            # refresh every num of seconds
                             # if <= 0, then never refresh automatically
-                            # NOTE: currently unimplemented. Should not
-                            # be necessary feature once we get AJAX on here.
+                            # NOTE: currently unimplemented.
 
 ##############
 # No need to touch anything below
@@ -29,6 +28,10 @@ app = TeacherControl(dir=SIGNALS_DIR)
 # neccessary for CGI to work
 print "Content-Type: text/html"
 print
+###############
+
+###############
+# Signal Logic
 ###############
 
 # send 'arm' signals
@@ -73,7 +76,8 @@ for id in app.disciples:
 
 print """
       <h2>Arm</h2>
-      <form name="armcontrol" method="post" action="webapp.py">
+      <form id="armcontrol" name="armcontrol" method="post"
+      action="webapp.py">
       """
 
 for id, state in zip(app.disciples, app.states):
@@ -90,7 +94,8 @@ print """
 ################
 print """
     <h2>Record</h2>
-    <form name="recordcontrol" method="post" action="webapp.py">
+    <form id="recordcontrol" name="recordcontrol" method="post"
+    action="webapp.py">
 """
 
 for id, state in zip(app.disciples, app.states):
@@ -107,7 +112,8 @@ print """
 ################
 print """
     <h2>End Recording</h2>
-    <form name="endrecordcontrol" method="post" action="webapp.py">
+    <form id="endrecordcontrol" name="endrecordcontrol" method="post"
+    action="webapp.py">
 """
 
 for id, state in zip(app.disciples, app.states):
