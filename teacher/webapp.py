@@ -1,12 +1,29 @@
 #!/usr/bin/python
+# Maintained by Elben Shira @ gmail.
 
 from libwebapp import *
 import cgi
 import cgitb
 
+##############
+# Teacher Control Setup
+#
+# Please set these variables!
+##############
+SIGNALS_DIR = "/var/www"    # path to signals directory
+REFRESH_RATE = 3            # refresh every num of seconds
+                            # if <= 0, then never refresh automatically
+                            # NOTE: currently unimplemented. Should not
+                            # be necessary feature once we get AJAX on here.
+
+##############
+# No need to touch anything below
+# unless you know what you are doing.
+##############
+
 cgitb.enable()
 form = cgi.FieldStorage()
-app = TeacherControl(dir="/var/www")
+app = TeacherControl(dir=SIGNALS_DIR)
 
 ###############
 # neccessary for CGI to work
@@ -40,6 +57,8 @@ if form.has_key("endrecord"):
 ################
 print "<h1>Stone Tools: webapp</h1>"
 print "<hr>"
+
+print """<h2><a href="javascript:location.reload(true)">Refresh!</a></h2>"""
 
 # receive 'exist' signals
 app.verify_exist()

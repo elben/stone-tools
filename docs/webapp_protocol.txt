@@ -1,0 +1,52 @@
+Stone Tools - webapp protocol
+
+The webapp controls the communication between Teacher and disciples. This
+communication occurs using signals that comply with the webapp protocol. In
+the protocol, a machine can send, remove, and receive signals. When a
+machine sends a signal, that signal is visible to both parties until the
+sender removes the signal. Accepting a signal does not remove a signal. The
+party sending the signal does not know that signal was received. Instead,
+the receiving end sends another signal, a 'verified' signal, to let the
+sending party know that the signal was received.
+
+Why this silliness? To keep a stable and sound state.
+
+The signals:
+  'exist'
+  'exist_verified'
+  'arm'
+  'arm_verified'
+  'record'
+  'record_verified'
+
+In the perspective of webapp:
+  disciple exists    <==> 'exist_verified' received
+  disciple armed     <==> disciple exists and 'arm_verified' received
+  disciple recording <==> disciple armed and 'record_verified' received
+
+In the perspective of disciple:
+  webapp exists          <==> 'exist_verified' received
+  webapp signaled arm    <==> webapp exists and 'arm' received
+  webapp signaled record <==> webapp signaled arm and 'record' received
+
+Main Loop:
+ forever:
+  1) disciple sends    'exist' when it finds HD PVR
+  2) webapp   receives 'exist'
+  3) webapp   sends    'exist_verified'
+  4) disciple receives 'exist_verified'
+  5) disciple removes  'exist'
+  6) webapp   sends    'arm'
+  7) disciple receives 'arm' and arms itself
+  8) disciple sends    'arm_verified'
+  9) webapp   receives 'arm_verified'
+ 10) webapp   removes  'arm'
+ 11) webapp   sends    'record'
+ 12) disciple receives 'record' and begins recording
+ 13) disciple sends    'record_verified'
+ 14) webapp   receives 'record_verified'
+ 15) webapp   removes  'record' when want to stop recording
+ 16) webapp   removes  'exist_verified'
+ 17) disciple removes  'arm_verified'
+ 18) disciple removes  'record_verified'
+

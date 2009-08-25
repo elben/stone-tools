@@ -1,6 +1,17 @@
+# Maintained by Elben Shira
+
 import os
 
 class TeacherControl:
+    """
+    TeacherControl controls the communication between disciples and
+    Teacher. It mines and remembers the state of each disciple.
+    The protocol is defined in stone-tools/docs/webapp_protocol.txt.
+    """
+
+    # Possible states of disciple. The state of a disciple is represented
+    # via a 32bit integer, where each bit is associated with a state that
+    # can be turned on (if bit = 1) or off (if bit = 0).
     UNKNOWN = 0x0
     LET_RECORD= 0x01
     DONT_RECORD= 0x02
