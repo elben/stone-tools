@@ -1,11 +1,11 @@
-# Maintained by Elben Shira
+# Maintained by Elben Shira @ gmail.
 
 import os
 
 class TeacherControl:
     """
     TeacherControl controls the communication between disciples and
-    Teacher. It mines and remembers the state of each disciple.
+    Teacher. It harvests and remembers the state of each disciple.
     The protocol is defined in stone-tools/docs/webapp_protocol.txt.
     """
 
@@ -27,7 +27,7 @@ class TeacherControl:
         self.dir = dir
         self.disciples = []     # unique identifier (e.g. MAC addr)
         self.states = []        # state of each disciple
-        self.mine_signals()
+        self.harvest_signals()
     
     def verify_exist(self):
         """
@@ -149,14 +149,14 @@ class TeacherControl:
             # flag the state
             self.states[self.disciples.index(id)] |= state
 
-    def mine_signals(self):
+    def harvest_signals(self):
         """
         Search through self.dir for signals and set the states of disciples
         to signals received.
 
         WARNING: preconditions as specified in the protocol is not checked.
         For example, a 'arm_verified' signal may be present, but not a
-        'exist_verified'. In this case, mine_signals() will still harvest
+        'exist_verified'. In this case, harvest_signals() will still harvest
         the 'arm_verified' signal.
         """
 
@@ -166,29 +166,26 @@ class TeacherControl:
         if self.states != []:
             self.states = []
 
-        for id in self.search_id(prefix='exist_verified_'):
-            if id not in self.disciples:
-                self.disciples.append(id)
-                self.states.append(TeacherControl.EXIST_VERIFIED)
-            else:
-                i = self.disciples.index(id)
-                self.states[i] |= TeacherControl.EXIST_VERIFIED
+        self.harvest_signal('exist_verified_', TeacherControl.EXIST_VERIFIED)
+        self.harvest_signal('arm_sent_', TeacherControl.ARM_SENT)
+        self.harvest_signal('arm_verified_', TeacherControl.ARM_VERIFIED)
+        self.harvest_signal('record_sent_', TeacherControl.RECORD_SENT)
+        self.harvest_signal('record_verified_', TeacherControl.RECORD_VERIFIED)
+        self.harvest_signal('record_end_', TeacherControl.RECORD_END)
 
-        for id in self.search_id(prefix='arm_verified_'):
+    def harvest_signal(self, prefix, signal):
+        """
+        Search through self.dir for signals of a type prefix.
+        If signal found for a disciple, set that disciple's state to
+        that signal.
+        """
+        for id in self.search_id(prefix):
             if id not in self.disciples:
                 self.disciples.append(id)
-                self.states.append(TeacherControl.ARM_VERIFIED)
+                self.states.append(signal)
             else:
                 i = self.disciples.index(id)
-                self.states[i] |= TeacherControl.ARM_VERIFIED
-
-        for id in self.search_id(prefix='record_verified_'):
-            if id not in self.disciples:
-                self.disciples.append(id)
-                self.states.append(TeacherControl.RECORD_VERIFIED)
-            else:
-                i = self.disciples.index(id)
-                self.states[i] |= TeacherControl.RECORD_VERIFIED
+                self.states[i] |= signal
 
     def search_id(self, prefix):
         """

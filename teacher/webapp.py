@@ -58,6 +58,24 @@ if form.has_key("endrecord"):
 ################
 # Intro
 ################
+
+print """
+  <html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <title>Stone Tools: webapp</title>
+  <script type="text/javascript">
+  function reloadIframe()
+  {
+    var delay = 3000
+    var cmd = "document.getElementById('status_frame').src='webapp_status.py'"
+    setInterval(cmd, delay)
+  }
+  </script>
+  </head>
+  <body onload="reloadIframe();">
+  """
+
 print "<h1>Stone Tools: webapp</h1>"
 print "<hr>"
 
@@ -65,10 +83,15 @@ print """<h2><a href="javascript:location.reload(true)">Refresh!</a></h2>"""
 
 # receive 'exist' signals
 app.verify_exist()
-print "<h2>Status</h2>"
-for id in app.disciples:
-    print app.status_str(id)
-    print "<br />"
+
+################
+# Print status
+################
+print """
+    <iframe id="status_frame" src="webapp_status.py" width="100%" frameborder="0">
+      <p>Your browser does not support iframes.</p>
+    </iframe>
+"""
 
 ################
 # Arming station
@@ -124,3 +147,5 @@ print """
     <input type="submit" value="Send End Record Signal">
     </form>
 """
+
+print """</body></html>"""
