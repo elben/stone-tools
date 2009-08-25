@@ -105,6 +105,9 @@ class WGet:
         """Returns size (bytes) of local file."""
         return os.path.getsize(self.local_file)
 
+    def finished(self):
+        return self.size_remote() == self.size_local()
+
     def progress(self):
         return float(self.size_local())/self.size_remote()
 

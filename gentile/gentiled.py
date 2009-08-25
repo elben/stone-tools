@@ -9,7 +9,7 @@ def main(argv = None):
     if argv is None:
         argv = sys.argv
     
-    # get the downoad location from the pointer file we were passed
+    # get the download location from the pointer file we were passed
     try:
         with open(argv[0], "r") as file:
             # get data from pointer file
@@ -36,7 +36,7 @@ def main(argv = None):
     mplayer_size = 25000
     
     while True:
-        time.sleep(0.2)     # no spin zone!
+        time.sleep(0.1)     # no spin zone!
         wget.download(autokill=True)
         
         if ( (mplayer == None or mplayer.poll() != None)

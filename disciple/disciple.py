@@ -58,7 +58,8 @@ def main():
             time.sleep(0.2)
         print "Existence confirmed"
         
-        os.remove(EXIST_FILE + mac_address)  # remove 'exist' signal
+        if os.path.isfile(EXIST_FILE + mac_address):
+            os.remove(EXIST_FILE + mac_address)  # remove 'exist' signal
         
         video_file_name = os.path.join(NFS_DIR, VIDEO_PREFIX + mac_address)
         
