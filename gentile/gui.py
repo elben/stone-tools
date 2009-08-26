@@ -8,6 +8,8 @@ import time
 import urllib2
 import re
 
+VIDEO_BITRATE = 4500 # kbits / s
+local_file = "sermon.ts"
 
 class glob:
     dir = "http://localhost:8888/elbenshira/d/"
@@ -98,6 +100,12 @@ def draw_selector(selected_row=0):
             gui.s.addstr(row_disp, 1, str(videos[v]))
         row_disp += 1
 
+def bytes2secs(bytes):
+    return float(bytes)/(float(VIDEO_BITRATE)/8.0)
+
+def secs2bytes(secs):
+    return float(secs) * float(VIDEO_BITRATE) / 8.0
+
 def main():
     init_screen()
     gui.s.nodelay(1)    # stop getch() from blocking
@@ -133,8 +141,7 @@ def main():
 
     # download pointer file
     ptr_file = gui.ptr_files[selected_ptr]
-    local_file = "sermon.ts"
-    ptr_wget = gently.WGet(glob.URL_PAUL, ptr_file)
+    ptr_wget = gently.WGet(glob.URL_PAUL, ptr_file, delay_wget=5)
     ptr_wget.download()
 
     # Wget setup
@@ -162,12 +169,20 @@ def main():
     
     wget = gently.WGet(url, remote_file, local_file, delay_wget=5)
     
-    mplayer = None
-    mplayer_size = 25000
-    mplayer_stdout_file = open("mplayer_stdout", "arw")
-    mplayer_stderr_file = open("mplayer_stderr", "arw")
+    if os.path.isfile("mplayer_stdout"):
+        mplayer_stdout_file = open("mplayer_stdout", "rw")
+    else:
+        mplayer_stdout_file = open("mplayer_stdout", "a")
+
+    if os.path.isfile("mplayer_stderr"):
+        mplayer_stderr_file = open("mplayer_stderr", "rw")
+    else:
+        mplayer_stderr_file = open("mplayer_stderr", "a")
     
     download_file = False
+    mplayer = None
+    mplayer_size = secs2bytes(15)   # 15 second buffer
+    mplayer_once = True
     while True:
         gui.s.erase()
         if c == ord('q'):
@@ -182,22 +197,22 @@ def main():
         gui.s.addstr(4, 18, '(' + str(gui.ptr_files[selected_ptr]) + ')')
         if download_file:
             wget.download()
-            gui.s.addstr(4, 10, 'Downloading' + ('.'*(dots_count%4)))
-            if time.time() - prev_dots_time >= dots_delay:
-                prev_dots_time = time.time()
-                dots_count += 1
         else:
             wget.terminate()
         wget.log_status()
-        if ((mplayer == None or mplayer.poll() != None)
+        if (mplayer_once and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
             mplayer = sp.Popen(["mplayer", local_file],
-                    stdout=mplayer_stdout_file, stderr=mplayer_stderr_file)
-
+                    stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
+                    stdin=sp.PIPE)
+            mplayer_once = False
         progress_bar(wget.progress(), 6, 4)
-        gui.s.addstr(9, 4, "Total Downloaded:    15 min")
-        gui.s.addstr(10, 4, "Total Available:     30 min")
+        gui.s.addstr(9, 4, "Size: " + str(wget.size_local()/1024/1024) + "/" +
+                str(wget.size_remote()/1024/1024) + " MB")
+        gui.s.addstr(10, 4, "Time: " + str(bytes2secs(wget.size_local())) + "/" +
+                str(bytes2secs(wget.size_remote())) + " sec")
         gui.s.addstr(11, 4, "Time until catch-up: 15 min")
+        gui.s.addstr(21, 4, str(wget.size_remote()))
 
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
         progress_bar(.3, 15, 4)
