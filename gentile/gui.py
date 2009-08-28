@@ -9,30 +9,27 @@ import urllib2
 import re
 
 VIDEO_BITRATE = 4500 # kbits / s
-local_file = "sermon.ts"
-
-class glob:
-    dir = "http://localhost:8888/elbenshira/d/"
-    #ip = "http://elbenshira.com/d/"
-    #file = "elben_resume.pdf"
-    out_file = ""
-    URL_PAUL = "http://10.100.1.243"
-    FILE_EXT = "pt"
+LOCAL_FILE = "sermon.ts"
+#URL_PAUL = "http://10.100.1.243"
+URL_PAUL = "http://127.0.0.1"
+FILE_EXT = "pt"
 
 class gui:
     w = 80
     h = 24
     s = curses.initscr()
     s = curses.newwin(24, 80)
-    ptr_delay = time.time()
-    ptr_files = []
+    ptr_delay = -2e10   # only check every x seconds, but skip first delay
+    ptr_files = []      # list of pt files found
 
 def drawchar(chr, row, col, color=1):
     gui.s.addch(row, col, chr, curses.color_pair(1))
 
 def init_screen():
     curses.noecho()      # no keyboard echo
-    #curses.curs_set(0)  # hide cursor
+    try:
+        curses.curs_set(0)   # hide cursor
+    except: pass
     curses.cbreak()      # no waiting until [Enter]
     if curses.has_colors():
         curses.start_color()
@@ -69,13 +66,13 @@ def draw_title(title="Gentile Monitor", border=True):
     gui.s.border() # draw sweet border
     gui.s.addstr(1, 30, title)
     if border:
-        gui.s.hline(2, 1, ord('_'), gui.w-2)
+        gui.s.hline(2, 1, curses.ACS_HLINE, gui.w-2)
 
 def find_video_ptrs():
     if time.time() - gui.ptr_delay >= 1:
-        ptr_re = re.compile('"[^"]*\.' + glob.FILE_EXT + '\"')
+        ptr_re = re.compile('"[^"]*\.' + FILE_EXT + '\"')
         ptr_files = []
-        paul_url = urllib2.urlopen(glob.URL_PAUL)
+        paul_url = urllib2.urlopen(URL_PAUL)
         for line in paul_url:
             search = ptr_re.search(line)
             if search is None:
@@ -88,16 +85,16 @@ def find_video_ptrs():
         gui.ptr_files = ptr_files
     return gui.ptr_files
 
-def draw_selector(selected_row=0):
+def draw_selector(selection, selected_row=0):
     draw_title("Video Selection")
-    videos = find_video_ptrs()
+    #selection = find_video_ptrs()
 
     row_disp = 3
-    for v in range(len(videos)):
-        if selected_row%len(videos) == v:
-            gui.s.addstr(row_disp, 1, str(videos[v]), curses.A_STANDOUT)
+    for v in range(len(selection)):
+        if selected_row%len(selection) == v:
+            gui.s.addstr(row_disp, 1, str(selection[v]), curses.A_STANDOUT)
         else:
-            gui.s.addstr(row_disp, 1, str(videos[v]))
+            gui.s.addstr(row_disp, 1, str(selection[v]))
         row_disp += 1
 
 def bytes2secs(bytes):
@@ -105,6 +102,27 @@ def bytes2secs(bytes):
 
 def secs2bytes(secs):
     return float(secs) * float(VIDEO_BITRATE) / 8.0
+
+def video_select():
+    """Select a pt file from URL_PAUL directory."""
+    c = 0   # keyboard input
+    selected_ptr = 0
+    selection = find_video_ptrs()
+    while True:
+        gui.s.erase()
+        draw_selector(selection, selected_ptr)
+        c = gui.s.getch()
+        if c == curses.KEY_DOWN:
+            selected_ptr += 1
+        elif c == curses.KEY_UP:
+            selected_ptr -= 1
+        elif c == 10:
+            # keypress ENTER
+            break
+        gui.s.addstr(20, 1, str(c))
+        time.sleep(.001)
+    selected_ptr %= len(gui.ptr_files) 
+    return selected_ptr
 
 def main():
     init_screen()
@@ -119,55 +137,46 @@ def main():
     prev_dots_time = -dots_delay
     dots_count = 0
 
-    c = 0
-    
-    draw_time = time.time()
-    selected_ptr = 0
+    # select a pt file
+    # will continue to ask for a selection if
+    # the previous selection was invalid
     while True:
-        gui.s.erase()
+        # select pt file
+        selected_ptr = video_select()
 
-        draw_selector(selected_ptr)
-        c = gui.s.getch()
-        if c == curses.KEY_DOWN:
-            selected_ptr += 1
-        elif c == curses.KEY_UP:
-            selected_ptr -= 1
-        elif c == 10:
-            # keypress ENTER
-            break
-        gui.s.addstr(20, 1, str(c))
-        time.sleep(.001)
-    selected_ptr %= len(gui.ptr_files) 
+        # download pointer file
+        ptr_file = gui.ptr_files[selected_ptr]
+        try:
+            ptr_wget = gently.WGet(URL_PAUL, ptr_file, delay_wget=5)
+            ptr_wget.download()
+        except: continue
 
-    # download pointer file
-    ptr_file = gui.ptr_files[selected_ptr]
-    ptr_wget = gently.WGet(glob.URL_PAUL, ptr_file, delay_wget=5)
-    ptr_wget.download()
-
-    # Wget setup
-    # get the download location from the pointer file we were passed
-    while not ptr_wget.finished():
-        gui.s.addstr(20, 30, "Downloading...")
-        time.sleep(.1)
-    try:
-        with open(ptr_file, "r") as file:
-            # get data from pointer file
-            file_contents = file.readlines()
-            
-            # first line is the server url and directory
-            url = file_contents[0].strip()
-            
-            # second line is the sermon video location
-            remote_file = file_contents[1].strip()
-    except:
-        print "Failed to parse download location from pointer file!"
-        return 1
+        # Wget setup
+        # get the download location from the pointer file we were passed
+        while not ptr_wget.finished():
+            gui.s.addstr(20, 30, "Downloading...")
+            time.sleep(.1)
+        try:
+            with open(ptr_file, "r") as file:
+                # get data from pointer file
+                file_contents = file.readlines()
+                
+                # first line is the server url and directory
+                remote_dir = file_contents[0].strip()
+                
+                # second line is the sermon video location
+                remote_file = file_contents[1].strip()
+        except:
+            continue
+            print "Failed to parse download location from pointer file!"
+            return 1
+        break   # got all the way here, so everything works!
     
     # remove previously played file
     if os.path.isfile(ptr_file):
         os.remove(ptr_file)
     
-    wget = gently.WGet(url, remote_file, local_file, delay_wget=5)
+    wget = gently.WGet(remote_dir, remote_file, LOCAL_FILE, delay_wget=5)
     
     if os.path.isfile("mplayer_stdout"):
         mplayer_stdout_file = open("mplayer_stdout", "rw")
@@ -185,6 +194,7 @@ def main():
     mplayer_once = True
     while True:
         gui.s.erase()
+        c = gui.s.getch()
         if c == ord('q'):
             wget.terminate()
             break
@@ -202,7 +212,7 @@ def main():
         wget.log_status()
         if (mplayer_once and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
-            mplayer = sp.Popen(["mplayer", local_file],
+            mplayer = sp.Popen(["mplayer", LOCAL_FILE],
                     stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
                     stdin=sp.PIPE)
             mplayer_once = False
@@ -220,13 +230,12 @@ def main():
         gui.s.addstr(19, 4, "Total Time:     30 min")
         gui.s.addstr(20, 4, "Time Remaining:  2 min")
 
-        c = gui.s.getch()
         gui.s.refresh()
         time.sleep(.02)          # to kill spinning
 
     # done playing! remove video file
-    if os.path.isfile(local_file):
-        os.remove(local_file)
+    if os.path.isfile(LOCAL_FILE):
+        os.remove(LOCAL_FILE)
     mplayer_stdout_file.close()
     restore_screen()
 
