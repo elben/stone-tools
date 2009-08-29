@@ -13,6 +13,8 @@ LOCAL_FILE = "sermon.ts"
 #URL_PAUL = "http://10.100.1.243"
 URL_PAUL = "http://localhost:8888/"
 FILE_EXT = "pt"
+MPLAYER_STDOUT_FILE = "mplayer_stdout"
+MPLAYER_STDERR_FILE = "mplayer_stderr"
 
 class gui:
     w = 80
@@ -42,7 +44,7 @@ def restore_screen():
     curses.echo()
     curses.endwin()
 
-def progress_bar(percent=0, row=0, col=0, color=0):
+def progress_bar(percent=0, row=0, col=0, color=0, width=70):
     if percent > 1:
         percent = 1
     elif percent < 0:
@@ -52,20 +54,31 @@ def progress_bar(percent=0, row=0, col=0, color=0):
     wait = "-"
     done = "|"
     tip = ">"
-    num_done = percent/2
-    num_wait = 50 - num_done
+    num_done = int(percent*(float(width)/100))
+    num_wait = width - num_done
 
     # build bar
-    s_top = '+' + '-'*48 + '+'
     s = done*num_done
     s += wait*num_wait
 
-    gui.s.addstr(row, col, s_top)
+    # top line
+    gui.s.hline(row, col+1, curses.ACS_HLINE, width)
+    gui.s.addch(row, col, curses.ACS_ULCORNER)
+    gui.s.addch(row, col+width+1, curses.ACS_URCORNER)
+
+    # bottom line
+    gui.s.hline(row+2, col+1, curses.ACS_HLINE, width)
+    gui.s.addch(row+2, col, curses.ACS_LLCORNER)
+    gui.s.addch(row+2, col+width+1, curses.ACS_LRCORNER)
+
+    # side lines
+    gui.s.addch(row+1, col, curses.ACS_VLINE)
+    gui.s.addch(row+1, col+width+1, curses.ACS_VLINE)
+
     if curses.has_colors():
-        gui.s.addstr(row+1, col, s, curses.color_pair(color))
+        gui.s.addstr(row+1, col+1, s, curses.color_pair(color))
     else:
-        gui.s.addstr(row+1, col, s)
-    gui.s.addstr(row+2, col, s_top)
+        gui.s.addstr(row+1, col+1, s)
 
 def draw_title(title="Gentile Monitor", border=True):
     gui.s.border() # draw sweet border
@@ -201,12 +214,12 @@ def main():
     
     wget = gently.WGet(remote_dir, remote_file, LOCAL_FILE, delay_wget=5)
     
-    try: os.remove("mplayer_stdout")
+    try: os.remove(MPLAYER_STDOUT_FILE)
     except: pass
-    try: os.remove("mplayer_stderr")
+    try: os.remove(MPLAYER_STDERR_FILE)
     except: pass
-    mplayer_stdout_file = open("mplayer_stdout", "wr")
-    mplayer_stderr_file = open("mplayer_stderr", "wr")
+    mplayer_stdout_file = open(MPLAYER_STDOUT_FILE, "wr")
+    mplayer_stderr_file = open(MPLAYER_STDERR_FILE, "wr")
     
     download_file = False
     mplayer = None
@@ -216,7 +229,6 @@ def main():
     while True:
         gui.s.erase()
         c = gui.s.getch()
-        gui.s.addstr(22, 10, str(c))
         if c == ord('q'):
             wget.terminate()
             if mplayer is not None:
@@ -258,7 +270,7 @@ def main():
             bar_color = 1   # red
         time_local = bytes2secs(wget.size_local())
         time_remote = bytes2secs(wget.size_remote())
-        time_playback = mplayer_status("mplayer_stdout")
+        time_playback = mplayer_status(MPLAYER_STDOUT_FILE)
         progress_bar(wget.progress(), 6, 4, bar_color)
         gui.s.addstr(9, 4, "Size: " +
                 "{0:0.1f}".format(float(wget.size_local())/1024/1024) + " of " +
@@ -267,7 +279,6 @@ def main():
         gui.s.addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
                 secs2str(time_remote))
         gui.s.addstr(11, 4, "Time until catch-up: " + str(wget.alive()))
-        gui.s.addstr(21, 4, str(wget.size_remote()))
 
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
         playback_progress = 0
