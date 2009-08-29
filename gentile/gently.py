@@ -70,12 +70,10 @@ class WGet:
         """
         enough_delay = time.time() - self.prev_time_wget >= self.delay_wget
         if not self.alive() and enough_delay:
-            self.log("NOT ALIVE AND DENOUGH!")
             # wget not running
             self.start()
             self.prev_time_wget = time.time()
         elif autokill and self.alive() and enough_delay:
-            self.log("NOO!!")
             self.terminate()
             self.start()
             self.prev_time_wget = time.time()
@@ -85,7 +83,6 @@ class WGet:
         Terminate wget process.
         """
         if self.alive():
-            self.log("DONEEEEEEEEEEEE")
             self.wget_proc.terminate()
             self.wget_proc = None
             self.prev_time_wget = -self.delay_wget  # instant restart

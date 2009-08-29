@@ -22,7 +22,7 @@ class gui:
     ptr_delay = -2e10   # only check every x seconds, but skip first delay
     ptr_files = []      # list of pt files found
 
-def init_screen():
+def init_curses():
     curses.noecho()      # no keyboard echo
     try:
         curses.curs_set(0)   # hide cursor
@@ -33,6 +33,8 @@ def init_screen():
         curses.use_default_colors()
         curses.init_pair(1, curses.COLOR_RED, -1)
         curses.init_pair(2, curses.COLOR_GREEN, -1)
+    gui.s.nodelay(1)    # stop getch() from blocking
+    gui.s.keypad(1)
 
 def restore_screen():
     curses.nocbreak()
@@ -130,18 +132,7 @@ def video_select():
     return selected_ptr
 
 def main():
-    init_screen()
-
-    gui.s.nodelay(1)    # stop getch() from blocking
-    gui.s.keypad(1)
-
-    loop_delay = .1
-    prev_loop_time = -loop_delay
-
-    # for download "..."
-    dots_delay = 0.5    # seconds
-    prev_dots_time = -dots_delay
-    dots_count = 0
+    init_curses()
 
     # select a pt file
     # will continue to ask for a selection if
@@ -201,11 +192,22 @@ def main():
     while True:
         gui.s.erase()
         c = gui.s.getch()
+        gui.s.addstr(22, 10, str(c))
         if c == ord('q'):
             wget.terminate()
+            if mplayer is not None:
+                mplayer.terminate()
             break
         elif c == ord('d'):
             download_file = not download_file 
+        elif c == 260:  # left arrow
+            if mplayer is not None:
+                mplayer.stdin.write('j')
+                #mplayer.communicate('j')
+        elif c == 261:  # right arrow
+            if mplayer is not None:
+                mplayer.stdin.write('k')
+                #mplayer.communicate('k')
 
         draw_title()
         # print status
@@ -220,13 +222,11 @@ def main():
         # start mplayer
         if (mplayer_once and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
-            """
             mplayer = sp.Popen(["mplayer", LOCAL_FILE],
                     stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
                     stdin=sp.PIPE)
             mplayer_once = False
 
-            """
         bar_color = 2   # green
         if not wget.alive():
             bar_color = 1   # red
