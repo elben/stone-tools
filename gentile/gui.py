@@ -131,10 +131,10 @@ def secs2str(secs):
     #return str(hrs) + ":" + str(mins) + ":" + str(secs)
 
 def bytes2secs(bytes):
-    return float(bytes)/(float(VIDEO_BITRATE)/8.0)
+    return float(bytes)/(float(VIDEO_BITRATE)/8.0)/1000
 
 def secs2bytes(secs):
-    return float(secs) * float(VIDEO_BITRATE) / 8.0
+    return float(secs) * float(VIDEO_BITRATE) / 8.0 * 1000
 
 def video_select():
     """Select a pt file from URL_PAUL directory."""
@@ -256,19 +256,24 @@ def main():
         bar_color = 2   # green
         if not wget.alive():
             bar_color = 1   # red
-        time_local = bytes2secs(wget.size_local())/1000
-        time_remote = bytes2secs(wget.size_remote())/1000
+        time_local = bytes2secs(wget.size_local())
+        time_remote = bytes2secs(wget.size_remote())
         time_playback = mplayer_status("mplayer_stdout")
         progress_bar(wget.progress(), 6, 4, bar_color)
-        gui.s.addstr(9, 4, "Size: " + str(wget.size_local()/1024/1024) +
-                " of " + str(wget.size_remote()/1024/1024) + " MB")
+        gui.s.addstr(9, 4, "Size: " +
+                "{0:0.1f}".format(float(wget.size_local())/1024/1024) + " of " +
+                "{0:0.1f}".format(float(wget.size_remote())/1024/1024) +
+                " MB")
         gui.s.addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
                 secs2str(time_remote))
         gui.s.addstr(11, 4, "Time until catch-up: " + str(wget.alive()))
         gui.s.addstr(21, 4, str(wget.size_remote()))
 
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
-        progress_bar(.3, 15, 4)
+        playback_progress = 0
+        if time_local != 0:
+            playback_progress = time_playback / time_local
+        progress_bar(playback_progress, 15, 4)
         gui.s.addstr(18, 4, "Time: " + secs2str(time_playback)
                 + " of " + secs2str(time_local))
         gui.s.addstr(19, 4, "Time Remaining: " +
