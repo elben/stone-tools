@@ -273,7 +273,10 @@ def main():
         playback_progress = 0
         if time_local != 0:
             playback_progress = time_playback / time_local
-        progress_bar(playback_progress, 15, 4)
+        bar_color = 2
+        if mplayer is None:
+            bar_color = 1
+        progress_bar(playback_progress, 15, 4, bar_color)
         gui.s.addstr(18, 4, "Time: " + secs2str(time_playback)
                 + " of " + secs2str(time_local))
         gui.s.addstr(19, 4, "Time Remaining: " +
