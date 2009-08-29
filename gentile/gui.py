@@ -66,9 +66,12 @@ def progress_bar(percent=0, row=0, col=0, color=0):
 
 def draw_title(title="Gentile Monitor", border=True):
     gui.s.border() # draw sweet border
-    gui.s.addstr(1, 30, title)
+    start_col = gui.w/2 - len(title)/2
+    gui.s.addstr(1, start_col, title)
     if border:
         gui.s.hline(2, 1, curses.ACS_HLINE, gui.w-2)
+        gui.s.addch(2, 0, curses.ACS_LTEE)
+        gui.s.addch(2, gui.w-1, curses.ACS_RTEE)
 
 def find_video_ptrs():
     if time.time() - gui.ptr_delay >= 1:
