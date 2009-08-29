@@ -1,9 +1,3 @@
-# force to accelerated projector display
-display=:0.1
+# Write your default config options here!
 
-# set osd to lowest level (only subtitles) = 0, normal = 1
-osdlevel=1
 
-# configure VDPAU
-vo=vdpau,xv,
-vc=ffh264vdpau,ffmpeg12vdpau,

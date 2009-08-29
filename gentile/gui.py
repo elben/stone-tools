@@ -33,6 +33,7 @@ def init_curses():
         curses.use_default_colors()
         curses.init_pair(1, curses.COLOR_RED, -1)
         curses.init_pair(2, curses.COLOR_GREEN, -1)
+        curses.init_pair(3, curses.COLOR_YELLOW, -1)
     gui.s.nodelay(1)    # stop getch() from blocking
     gui.s.keypad(1)
 
