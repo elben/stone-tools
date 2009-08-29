@@ -11,7 +11,7 @@ import re
 VIDEO_BITRATE = 4500 # kbits / s
 LOCAL_FILE = "sermon.ts"
 #URL_PAUL = "http://10.100.1.243"
-URL_PAUL = "http://127.0.0.1"
+URL_PAUL = "http://localhost:8888/"
 FILE_EXT = "pt"
 
 class gui:
@@ -21,9 +21,6 @@ class gui:
     s = curses.newwin(24, 80)
     ptr_delay = -2e10   # only check every x seconds, but skip first delay
     ptr_files = []      # list of pt files found
-
-def drawchar(chr, row, col, color=1):
-    gui.s.addch(row, col, chr, curses.color_pair(1))
 
 def init_screen():
     curses.noecho()      # no keyboard echo
@@ -40,7 +37,7 @@ def restore_screen():
     curses.echo()
     curses.endwin()
 
-def progress_bar(percent=0, row=0, col=0):
+def progress_bar(percent=0, row=0, col=0, color=0):
     if percent > 1:
         percent = 1
     elif percent < 0:
@@ -59,7 +56,7 @@ def progress_bar(percent=0, row=0, col=0):
     s += wait*num_wait
 
     gui.s.addstr(row, col, s_top)
-    gui.s.addstr(row+1, col, s)
+    gui.s.addstr(row+1, col, s, curses.color_pair(color))
     gui.s.addstr(row+2, col, s_top)
 
 def draw_title(title="Gentile Monitor", border=True):
@@ -126,6 +123,9 @@ def video_select():
 
 def main():
     init_screen()
+    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+
     gui.s.nodelay(1)    # stop getch() from blocking
     gui.s.keypad(1)
 
@@ -191,7 +191,7 @@ def main():
     download_file = False
     mplayer = None
     mplayer_size = secs2bytes(15)   # 15 second buffer
-    mplayer_once = True
+    mplayer_once = True             # only run mplayer once
     while True:
         gui.s.erase()
         c = gui.s.getch()
@@ -210,18 +210,26 @@ def main():
         else:
             wget.terminate()
         wget.log_status()
+
+        # start mplayer
         if (mplayer_once and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
+            """
             mplayer = sp.Popen(["mplayer", LOCAL_FILE],
                     stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
                     stdin=sp.PIPE)
             mplayer_once = False
-        progress_bar(wget.progress(), 6, 4)
+
+            """
+        bar_color = 2   # green
+        if not wget.alive():
+            bar_color = 1   # red
+        progress_bar(wget.progress(), 6, 4, bar_color)
         gui.s.addstr(9, 4, "Size: " + str(wget.size_local()/1024/1024) + "/" +
                 str(wget.size_remote()/1024/1024) + " MB")
         gui.s.addstr(10, 4, "Time: " + str(bytes2secs(wget.size_local())) + "/" +
                 str(bytes2secs(wget.size_remote())) + " sec")
-        gui.s.addstr(11, 4, "Time until catch-up: 15 min")
+        gui.s.addstr(11, 4, "Time until catch-up: " + str(wget.alive()))
         gui.s.addstr(21, 4, str(wget.size_remote()))
 
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
@@ -231,7 +239,7 @@ def main():
         gui.s.addstr(20, 4, "Time Remaining:  2 min")
 
         gui.s.refresh()
-        time.sleep(.02)          # to kill spinning
+        time.sleep(.1)          # to kill spinning
 
     # done playing! remove video file
     if os.path.isfile(LOCAL_FILE):

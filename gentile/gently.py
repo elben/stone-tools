@@ -9,6 +9,8 @@ import logging
 import logging.handlers
 import time
 
+devnull = open(os.devnull, 'w')
+
 class WGet:
     """
     WGet is an intelligent wrapper around the wget process.
@@ -18,7 +20,7 @@ class WGet:
 
     def __init__(self, remote_dir, remote_file, local_file=None,
             logger=None, log_file='logs/stone-gentile.log',
-            delay_wget=2, delay_http=5, delay_log=1):
+            delay_wget=5, delay_http=5, delay_log=1):
         
         # make sure we have a log directory so we don't crash (UBER ANNOYING)
         try:
@@ -54,7 +56,7 @@ class WGet:
         # set delay between requests
         self.delay_http = delay_http      # seconds
         self.delay_log = delay_log
-        self.delay_wget = delay_wget
+        self.delay_wget = delay_wget      # secs between wget restarts
         self.prev_time_http = -delay_http # no delay on first run
         self.prev_time_log = -delay_log
         self.prev_time_wget = -delay_wget
@@ -66,12 +68,14 @@ class WGet:
         If autokill is True, then WGet will kill and restart the
         wget process every delay_wget seconds.
         """
-        delayed = time.time() - self.prev_time_wget >= self.delay_wget
-        if not self.alive() and delayed:
+        enough_delay = time.time() - self.prev_time_wget >= self.delay_wget
+        if not self.alive() and enough_delay:
+            self.log("NOT ALIVE AND DENOUGH!")
             # wget not running
             self.start()
             self.prev_time_wget = time.time()
-        elif autokill and self.alive() and delayed:
+        elif autokill and self.alive() and enough_delay:
+            self.log("NOO!!")
             self.terminate()
             self.start()
             self.prev_time_wget = time.time()
@@ -81,6 +85,7 @@ class WGet:
         Terminate wget process.
         """
         if self.alive():
+            self.log("DONEEEEEEEEEEEE")
             self.wget_proc.terminate()
             self.wget_proc = None
             self.log("wget terminated.")
@@ -153,8 +158,8 @@ class WGet:
         User should never call this. Call download() instead.
         """
         self.wget_proc = subprocess.Popen(['wget', '-c', self.url(), '-O',
-            self.local_file], shell=False, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
+            self.local_file], shell=False, stdout=devnull,
+            stderr=devnull)
         self.log("wget started.")
 
 class TimeoutException(Exception):
