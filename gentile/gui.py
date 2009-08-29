@@ -118,7 +118,7 @@ def main():
     dots_delay = 0.5    # seconds
     prev_dots_time = -dots_delay
     dots_count = 0
-
+    
     c = 0
     
     draw_time = time.time()
@@ -183,16 +183,20 @@ def main():
     mplayer = None
     mplayer_size = secs2bytes(15)   # 15 second buffer
     mplayer_once = True
+    
     while True:
         gui.s.erase()
+        
+        # handle input
         if c == ord('q'):
             wget.terminate()
             break
         elif c == ord('d'):
             download_file = not download_file 
-
+        
         draw_title()
-        # print status
+        
+        # download status
         gui.s.addstr(4, 2, 'Download Status', curses.A_UNDERLINE)
         gui.s.addstr(4, 18, '(' + str(gui.ptr_files[selected_ptr]) + ')')
         if download_file:
@@ -200,6 +204,7 @@ def main():
         else:
             wget.terminate()
         wget.log_status()
+        
         if (mplayer_once and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
             mplayer = sp.Popen(["mplayer", local_file],
@@ -213,23 +218,24 @@ def main():
                 str(bytes2secs(wget.size_remote())) + " sec")
         gui.s.addstr(11, 4, "Time until catch-up: 15 min")
         gui.s.addstr(21, 4, str(wget.size_remote()))
-
+        
+        # playback status
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
         progress_bar(.3, 15, 4)
         gui.s.addstr(18, 4, "Time Played:    15 min")
         gui.s.addstr(19, 4, "Total Time:     30 min")
         gui.s.addstr(20, 4, "Time Remaining:  2 min")
-
+        
         c = gui.s.getch()
         gui.s.refresh()
         time.sleep(.02)          # to kill spinning
-
+    
     # done playing! remove video file
     if os.path.isfile(local_file):
         os.remove(local_file)
     mplayer_stdout_file.close()
+    mplayer.terminate()
     restore_screen()
-
 
 if __name__ == '__main__':
     try:
