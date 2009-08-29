@@ -28,8 +28,6 @@ def init_screen():
         curses.curs_set(0)   # hide cursor
     except: pass
     curses.cbreak()      # no waiting until [Enter]
-    if curses.has_colors():
-        curses.start_color()
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
 
 def restore_screen():
