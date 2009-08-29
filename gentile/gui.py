@@ -106,14 +106,29 @@ def draw_selector(selection, selected_row=0):
         row_disp += 1
 
 def mplayer_status(file, seek=1024):
+    """Returns string in HH:MM:SS format."""
     mp_status_re = re.compile(" +V: +[0-9]+\.[0-9]")
-    
-    try:
-        file.seek(-seek, os.SEEK_END)
-        stat = file.read(seek)
-        return mp_status_re.findall(stat)[-1]
-    except:
-        return None
+      
+    with open(file, "r") as f:
+        # find pos to seek to; make sure it is legal pos
+        pos = max(os.path.getsize(file) - seek, 0)
+        f.seek(pos)
+        contents = f.read(seek)
+        found = mp_status_re.findall(contents)
+        if len(found) >= 1:
+            last = found[-1]
+            last = last.strip(" V:")
+            return int(float(last))
+        return 0
+
+def secs2str(secs):
+    secs = int(secs)
+    hrs = secs / 3600
+    secs -= hrs * 3600
+    mins = secs / 60
+    secs -= mins * 60
+    return "{0}:{1:02}:{2:02}".format(hrs, mins, secs)
+    #return str(hrs) + ":" + str(mins) + ":" + str(secs)
 
 def bytes2secs(bytes):
     return float(bytes)/(float(VIDEO_BITRATE)/8.0)
@@ -186,15 +201,12 @@ def main():
     
     wget = gently.WGet(remote_dir, remote_file, LOCAL_FILE, delay_wget=5)
     
-    if os.path.isfile("mplayer_stdout"):
-        mplayer_stdout_file = open("mplayer_stdout", "rw")
-    else:
-        mplayer_stdout_file = open("mplayer_stdout", "a")
-
-    if os.path.isfile("mplayer_stderr"):
-        mplayer_stderr_file = open("mplayer_stderr", "rw")
-    else:
-        mplayer_stderr_file = open("mplayer_stderr", "a")
+    try: os.remove("mplayer_stdout")
+    except: pass
+    try: os.remove("mplayer_stderr")
+    except: pass
+    mplayer_stdout_file = open("mplayer_stdout", "wr")
+    mplayer_stderr_file = open("mplayer_stderr", "wr")
     
     download_file = False
     mplayer = None
@@ -244,19 +256,23 @@ def main():
         bar_color = 2   # green
         if not wget.alive():
             bar_color = 1   # red
+        time_local = bytes2secs(wget.size_local())/1000
+        time_remote = bytes2secs(wget.size_remote())/1000
+        time_playback = mplayer_status("mplayer_stdout")
         progress_bar(wget.progress(), 6, 4, bar_color)
-        gui.s.addstr(9, 4, "Size: " + str(wget.size_local()/1024/1024) + "/" +
-                str(wget.size_remote()/1024/1024) + " MB")
-        gui.s.addstr(10, 4, "Time: " + str(bytes2secs(wget.size_local())) + "/" +
-                str(bytes2secs(wget.size_remote())) + " sec")
+        gui.s.addstr(9, 4, "Size: " + str(wget.size_local()/1024/1024) +
+                " of " + str(wget.size_remote()/1024/1024) + " MB")
+        gui.s.addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
+                secs2str(time_remote))
         gui.s.addstr(11, 4, "Time until catch-up: " + str(wget.alive()))
         gui.s.addstr(21, 4, str(wget.size_remote()))
 
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
         progress_bar(.3, 15, 4)
-        gui.s.addstr(18, 4, "Time Played:    15 min")
-        gui.s.addstr(19, 4, "Total Time:     30 min")
-        gui.s.addstr(20, 4, "Time Remaining:  2 min")
+        gui.s.addstr(18, 4, "Time: " + secs2str(time_playback)
+                + " of " + secs2str(time_local))
+        gui.s.addstr(19, 4, "Time Remaining: " +
+                secs2str(time_local-time_playback))
 
         gui.s.refresh()
         time.sleep(.1)          # to kill spinning
@@ -265,6 +281,7 @@ def main():
     if os.path.isfile(LOCAL_FILE):
         os.remove(LOCAL_FILE)
     mplayer_stdout_file.close()
+    mplayer_stderr_file.close()
     restore_screen()
 
 
