@@ -88,6 +88,7 @@ class WGet:
             self.log("DONEEEEEEEEEEEE")
             self.wget_proc.terminate()
             self.wget_proc = None
+            self.prev_time_wget = -self.delay_wget  # instant restart
             self.log("wget terminated.")
 
     def alive(self):

@@ -28,7 +28,11 @@ def init_screen():
         curses.curs_set(0)   # hide cursor
     except: pass
     curses.cbreak()      # no waiting until [Enter]
-    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
+    if curses.has_colors():
+        curses.start_color()
+        curses.use_default_colors()
+        curses.init_pair(1, curses.COLOR_RED, -1)
+        curses.init_pair(2, curses.COLOR_GREEN, -1)
 
 def restore_screen():
     curses.nocbreak()
@@ -54,7 +58,10 @@ def progress_bar(percent=0, row=0, col=0, color=0):
     s += wait*num_wait
 
     gui.s.addstr(row, col, s_top)
-    gui.s.addstr(row+1, col, s, curses.color_pair(color))
+    if curses.has_colors():
+        gui.s.addstr(row+1, col, s, curses.color_pair(color))
+    else:
+        gui.s.addstr(row+1, col, s)
     gui.s.addstr(row+2, col, s_top)
 
 def draw_title(title="Gentile Monitor", border=True):
@@ -121,8 +128,6 @@ def video_select():
 
 def main():
     init_screen()
-    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
-    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
 
     gui.s.nodelay(1)    # stop getch() from blocking
     gui.s.keypad(1)
