@@ -132,6 +132,16 @@ def video_select():
     selected_ptr %= len(gui.ptr_files) 
     return selected_ptr
 
+def mplayer_status(file, seek=1024):
+    mp_status_re = re.compile(" +V: +[0-9]+\.[0-9]")
+    
+    try:
+        file.seek(-seek, os.SEEK_END)
+        stat = file.read(seek)
+        return mp_status_re.findall(stat)[-1]
+    except:
+        return None
+
 def main():
     init_curses()
 
@@ -244,7 +254,8 @@ def main():
 
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
         progress_bar(.3, 15, 4)
-        gui.s.addstr(18, 4, "Time Played:    15 min")
+        gui.s.addstr(18, 4, "Time Played: " +
+                str(mplayer_status(mplayer_stdout_file)))
         gui.s.addstr(19, 4, "Total Time:     30 min")
         gui.s.addstr(20, 4, "Time Remaining:  2 min")
 
@@ -255,6 +266,7 @@ def main():
     if os.path.isfile(LOCAL_FILE):
         os.remove(LOCAL_FILE)
     mplayer_stdout_file.close()
+    mplayer_stderr_file.close()
     restore_screen()
 
 
