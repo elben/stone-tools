@@ -190,6 +190,7 @@ def main():
     mplayer = None
     mplayer_size = secs2bytes(15)   # 15 second buffer
     mplayer_once = True             # only run mplayer once
+    mplayer_start = False           # wait for user to start mplayer
     while True:
         gui.s.erase()
         c = gui.s.getch()
@@ -201,6 +202,8 @@ def main():
             break
         elif c == ord('d'):
             download_file = not download_file 
+        elif c == ord('m'):
+            mplayer_start = True
         elif c == 260:  # left arrow
             if mplayer is not None:
                 mplayer.stdin.write('j')
@@ -221,8 +224,8 @@ def main():
         wget.log_status()
 
         # start mplayer
-        if (mplayer_once and (mplayer == None or mplayer.poll() != None)
-                and wget.size_local() > mplayer_size):
+        if (mplayer_start and mplayer_once and (mplayer == None or
+                mplayer.poll() != None) and wget.size_local() > mplayer_size):
             mplayer = sp.Popen(["mplayer", LOCAL_FILE],
                     stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
                     stdin=sp.PIPE)
