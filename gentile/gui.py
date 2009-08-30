@@ -56,7 +56,7 @@ def progress_bar(percent=0, row=0, col=0, color=0, width=70):
     tip = ">"
     num_done = int(percent*(float(width)/100))
     num_wait = width - num_done
-
+    
     # build bar
     s = done*num_done
     s += wait*num_wait
@@ -77,8 +77,11 @@ def progress_bar(percent=0, row=0, col=0, color=0, width=70):
 
     if curses.has_colors():
         gui.s.addstr(row+1, col+1, s, curses.color_pair(color))
+        gui.s.addstr(row+1, col + (width/2)-1, str(percent)+"%",
+                curses.color_pair(color))
     else:
         gui.s.addstr(row+1, col+1, s)
+        gui.s.addstr(row+1, col + (width/2)-2, str(percent)+" %")
 
 def draw_title(title="Gentile Monitor", border=True):
     gui.s.border() # draw sweet border
@@ -214,12 +217,8 @@ def main():
     
     wget = gently.WGet(remote_dir, remote_file, LOCAL_FILE, delay_wget=5)
     
-    try: os.remove(MPLAYER_STDOUT_FILE)
-    except: pass
-    try: os.remove(MPLAYER_STDERR_FILE)
-    except: pass
-    mplayer_stdout_file = open(MPLAYER_STDOUT_FILE, "wr")
-    mplayer_stderr_file = open(MPLAYER_STDERR_FILE, "wr")
+    mplayer_stdout_file = open(MPLAYER_STDOUT_FILE, "w")
+    mplayer_stderr_file = open(MPLAYER_STDERR_FILE, "w")
     
     download_file = False
     mplayer = None
@@ -229,6 +228,7 @@ def main():
     while True:
         gui.s.erase()
         c = gui.s.getch()
+        gui.s.addstr(21, 4, str(c))    # display key vals for debug
         if c == ord('q'):
             wget.terminate()
             if mplayer is not None:
@@ -238,14 +238,27 @@ def main():
             download_file = not download_file 
         elif c == ord('m'):
             mplayer_start = True
+        elif c == 32:   # space bar
+            if mplayer is not None:
+                mplayer.stdin.write('p')    # pause
         elif c == 260:  # left arrow
             if mplayer is not None:
-                mplayer.stdin.write('j')
-                #mplayer.communicate('j')
+                mplayer.stdin.write('h')    # small seek left
         elif c == 261:  # right arrow
             if mplayer is not None:
-                mplayer.stdin.write('k')
-                #mplayer.communicate('k')
+                mplayer.stdin.write('j')    # small seek right
+        elif c == 44:   # ,
+            if mplayer is not None:
+                mplayer.stdin.write('g')    # medium seek left
+        elif c == 46:   # .
+            if mplayer is not None:
+                mplayer.stdin.write('k')    # medium seek right
+        elif c == 91:   # [
+            if mplayer is not None:
+                mplayer.stdin.write('f')    # long seek left
+        elif c == 93:   # ]
+            if mplayer is not None:
+                mplayer.stdin.write('l')    # long seek right
 
         draw_title()
         # print status
