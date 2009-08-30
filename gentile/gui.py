@@ -102,6 +102,9 @@ def find_video_ptrs():
                 paul_url = urllib2.urlopen(URL_PAUL)
                 break
             except: 
+                gui.s.addstr(22, 0,
+                        "Attempting to connect...".center(gui.w))
+                gui.s.refresh()
                 time.sleep(delay_time)
                 pass
         for line in paul_url:
@@ -266,7 +269,7 @@ def main():
         elif c == 93:   # ]
             if mplayer is not None:
                 mplayer.stdin.write('l')    # long seek right
-        elif c == 61:   # -
+        elif c == 45:   # -
             if mplayer is not None:
                 mplayer.stdin.write('z')    # short sound sync left
         elif c == 61:   # =
@@ -295,7 +298,8 @@ def main():
         # mplayer process
         if (mplayer_start and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
-            mplayer = sp.Popen(["mplayer", LOCAL_FILE],
+            mp_args = ["mplayer", "-osdlevel", "0", LOCAL_FILE]
+            mplayer = sp.Popen(mp_args,
                     stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
                     stdin=sp.PIPE)
         elif not mplayer_start and mplayer is not None:
@@ -330,15 +334,16 @@ def main():
 
         # display playback status
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
-        playback_progress = 0
-        if time_local != 0:
-            playback_progress = time_playback / time_local
         gui.s.addstr(18, 4, "Time: " + secs2str(time_playback)
                 + " of " + secs2str(time_local))
         gui.s.addstr(19, 4, "Time Remaining: " +
                 secs2str(time_local-time_playback))
 
         # display playback progress bar
+        try:
+            playback_progress = time_playback / time_local
+        except:
+            playback_progress = 0
         bar_color = 3   # green
         if mplayer_start and mplayer is None:
             bar_color = 1   # yellow
