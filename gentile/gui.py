@@ -344,9 +344,9 @@ def main():
                 " MB")
         gui.s.addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
                 secs2str(time_remote))
-        gui.s.addstr(11, 4, "Time until catch-up: unimplemented")
-        gui.s.addstr(12, 4, "Rate: " + str(int(wget.dl_rate())/1024/1024) +
+        gui.s.addstr(11, 4, "Rate: " + str(int(wget.dl_rate())/1024/1024) +
                 " MB/s")
+        #gui.s.addstr(12, 4, "Time until catch-up: unimplemented")
 
         # display playback status
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
