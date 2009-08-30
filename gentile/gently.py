@@ -61,6 +61,13 @@ class WGet:
         self.prev_time_log = -delay_log
         self.prev_time_wget = -delay_wget
 
+        self.delay_rate = .26   # seconds
+        self.prev_time_rate = -self.delay_rate
+
+        self.prev_sizes = []
+        self.max_history = 3
+        self.rate = 0    # bytes/s
+
     def download(self, autokill=True):
         """
         Starts wget process if none existed; do nothing otherwise.
@@ -107,6 +114,27 @@ class WGet:
     def size_local(self):
         """Returns size (bytes) of local file."""
         return os.path.getsize(self.local_file)
+
+    def dl_rate(self):
+        """
+        Returns rate of download in bytes/sec.
+        
+        User must call rate continually to get an accurate rate.
+        """
+
+        if time.time() - self.prev_time_rate >= self.delay_rate:
+            if len(self.prev_sizes) >= self.max_history:
+                del self.prev_sizes[0]
+            self.prev_sizes.append(self.size_local())
+
+            prev = 0
+            total = 0
+            for i in range(len(self.prev_sizes)-1):
+                total += self.prev_sizes[i+1] - self.prev_sizes[i]
+                
+            self.rate = total / self.delay_rate / len(self.prev_sizes) 
+            self.prev_time_rate = time.time()
+        return self.rate
 
     def finished(self):
         return self.size_remote() == self.size_local()

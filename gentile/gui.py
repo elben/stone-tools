@@ -36,6 +36,7 @@ def init_curses():
         curses.init_pair(1, curses.COLOR_YELLOW, -1)
         curses.init_pair(2, curses.COLOR_RED, -1)
         curses.init_pair(3, curses.COLOR_GREEN, -1)
+        curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_WHITE)
     gui.s.nodelay(1)    # stop getch() from blocking
     gui.s.keypad(1)
 
@@ -91,6 +92,9 @@ def draw_title(title="Gentile Monitor", border=True):
         gui.s.hline(2, 1, curses.ACS_HLINE, gui.w-2)
         gui.s.addch(2, 0, curses.ACS_LTEE)
         gui.s.addch(2, gui.w-1, curses.ACS_RTEE)
+
+def draw_status(status="press h for help"):
+    gui.s.addstr(gui.h-2, 1, status.center(gui.w-2))
 
 def find_video_ptrs():
     delay_time = 1  # seconds
@@ -235,6 +239,7 @@ def main():
     mplayer_size = secs2bytes(15)   # 15 second buffer
     mplayer_start = False           # wait for user to start mplayer
     a_v_diff = 0
+    display_help = False
     while True:
         gui.s.erase()
 
@@ -249,6 +254,8 @@ def main():
             download_file = not download_file 
         elif c == ord('m'):
             mplayer_start = not mplayer_start
+        elif c == ord('h'):
+            display_help = not display_help
         elif c == 32:   # space bar
             if mplayer is not None:
                 mplayer.stdin.write('p')    # pause
@@ -337,7 +344,9 @@ def main():
                 " MB")
         gui.s.addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
                 secs2str(time_remote))
-        gui.s.addstr(11, 4, "Time until catch-up: " + str(wget.alive()))
+        gui.s.addstr(11, 4, "Time until catch-up: unimplemented")
+        gui.s.addstr(12, 4, "Rate: " + str(int(wget.dl_rate())/1024/1024) +
+                " MB/s")
 
         # display playback status
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
@@ -359,22 +368,46 @@ def main():
             bar_color = 2   # red
         progress_bar(playback_progress, 15, 4, bar_color)
 
+        draw_status()
+        if display_help:
+            draw_help()
         gui.s.refresh()
         time.sleep(.1)          # to kill spinning
 
     # done playing! remove video file
-    if os.path.isfile(LOCAL_FILE):
-        os.remove(LOCAL_FILE)
+    #if os.path.isfile(LOCAL_FILE):
+    #    os.remove(LOCAL_FILE)
+
     mplayer_stdout_file.close()
     mplayer_stderr_file.close()
     restore_screen()
 
-def draw_help(row=2, col=4):
-    """
-    d           download or stop downloading video
-
-    """
-
+def draw_help(row=3, col=48):
+    help = [
+        " -----------main------------ ",
+        " q       quit                ",
+        " h       show/hide help      ",
+        " d       start/stop download ",
+        " m       start/stop mplayer  ",
+        " [space] pause video         ",
+        "                             ",
+        " -----------seek------------ ",
+        "        left  right          ",
+        " short: <--    -->           ",
+        " medium: ,      .            ",
+        " long:   [      ]            ",
+        "                             ",
+        " -------audio sync---------- ",
+        "        left  right          ",
+        " short:  -      =            ",
+        " medium: 9      0            ",
+        " long:   7      8            ",]
+    for h in help:
+        if curses.has_colors():
+            gui.s.addstr(row, col, h, curses.color_pair(4))
+        else:
+            gui.s.addstr(row, col, h)
+        row += 1
 
 if __name__ == '__main__':
     try:
