@@ -234,6 +234,7 @@ def main():
     mplayer = None
     mplayer_size = secs2bytes(15)   # 15 second buffer
     mplayer_start = False           # wait for user to start mplayer
+    a_v_diff = 0
     while True:
         gui.s.erase()
 
@@ -272,21 +273,27 @@ def main():
         elif c == 45:   # -
             if mplayer is not None:
                 mplayer.stdin.write('z')    # short sound sync left
+                a_v_diff -= 5
         elif c == 61:   # =
             if mplayer is not None:
                 mplayer.stdin.write('x')    # short sound sync right
+                a_v_diff += 5
         elif c == 57:   # 9
             if mplayer is not None:
                 mplayer.stdin.write('a')    # medium sound sync left
+                a_v_diff -= 50
         elif c == 48:   # 0
             if mplayer is not None:
                 mplayer.stdin.write('s')    # medium sound sync right
+                a_v_diff += 50
         elif c == 55:   # 7
             if mplayer is not None:
                 mplayer.stdin.write('q')    # long sound sync right
+                a_v_diff -= 500
         elif c == 56:   # 8
             if mplayer is not None:
                 mplayer.stdin.write('w')    # long sound sync right
+                a_v_diff += 500
 
         # wget process
         if download_file:
@@ -338,6 +345,7 @@ def main():
                 + " of " + secs2str(time_local))
         gui.s.addstr(19, 4, "Time Remaining: " +
                 secs2str(time_local-time_playback))
+        gui.s.addstr(20, 4, "A-V: " + str(a_v_diff) + " ms")
 
         # display playback progress bar
         try:
