@@ -33,9 +33,9 @@ def init_curses():
     if curses.has_colors():
         curses.start_color()
         curses.use_default_colors()
-        curses.init_pair(1, curses.COLOR_RED, -1)
-        curses.init_pair(2, curses.COLOR_GREEN, -1)
-        curses.init_pair(3, curses.COLOR_YELLOW, -1)
+        curses.init_pair(1, curses.COLOR_YELLOW, -1)
+        curses.init_pair(2, curses.COLOR_RED, -1)
+        curses.init_pair(3, curses.COLOR_GREEN, -1)
     gui.s.nodelay(1)    # stop getch() from blocking
     gui.s.keypad(1)
 
@@ -223,10 +223,10 @@ def main():
     download_file = False
     mplayer = None
     mplayer_size = secs2bytes(15)   # 15 second buffer
-    mplayer_once = True             # only run mplayer once
     mplayer_start = False           # wait for user to start mplayer
     while True:
         gui.s.erase()
+
         c = gui.s.getch()
         gui.s.addstr(21, 4, str(c))    # display key vals for debug
         if c == ord('q'):
@@ -237,7 +237,7 @@ def main():
         elif c == ord('d'):
             download_file = not download_file 
         elif c == ord('m'):
-            mplayer_start = True
+            mplayer_start = not mplayer_start
         elif c == 32:   # space bar
             if mplayer is not None:
                 mplayer.stdin.write('p')    # pause
@@ -260,31 +260,41 @@ def main():
             if mplayer is not None:
                 mplayer.stdin.write('l')    # long seek right
 
-        draw_title()
-        # print status
-        gui.s.addstr(4, 2, 'Download Status', curses.A_UNDERLINE)
-        gui.s.addstr(4, 18, '(' + str(gui.ptr_files[selected_ptr]) + ')')
+        # wget process
         if download_file:
             wget.download()
         else:
             wget.terminate()
         wget.log_status()
 
-        # start mplayer
-        if (mplayer_start and mplayer_once and (mplayer == None or
-                mplayer.poll() != None) and wget.size_local() > mplayer_size):
+        # mplayer process
+        if (mplayer_start and (mplayer == None or mplayer.poll() != None)
+                and wget.size_local() > mplayer_size):
             mplayer = sp.Popen(["mplayer", LOCAL_FILE],
                     stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
                     stdin=sp.PIPE)
-            mplayer_once = False
+        elif not mplayer_start and mplayer is not None:
+            mplayer.terminate()
+            mplayer = None
 
-        bar_color = 2   # green
-        if not wget.alive():
-            bar_color = 1   # red
+        # download and playback statistics
         time_local = bytes2secs(wget.size_local())
         time_remote = bytes2secs(wget.size_remote())
         time_playback = mplayer_status(MPLAYER_STDOUT_FILE)
+
+        draw_title()
+
+        # display download progress bar
+        bar_color = 3   # green
+        if not wget.alive():
+            bar_color = 1   # yellow
+        if not download_file:
+            bar_color = 2   # red
         progress_bar(wget.progress(), 6, 4, bar_color)
+        
+        # display download stats
+        gui.s.addstr(4, 2, 'Download Status', curses.A_UNDERLINE)
+        gui.s.addstr(4, 18, '(' + str(gui.ptr_files[selected_ptr]) + ')')
         gui.s.addstr(9, 4, "Size: " +
                 "{0:0.1f}".format(float(wget.size_local())/1024/1024) + " of " +
                 "{0:0.1f}".format(float(wget.size_remote())/1024/1024) +
@@ -293,18 +303,23 @@ def main():
                 secs2str(time_remote))
         gui.s.addstr(11, 4, "Time until catch-up: " + str(wget.alive()))
 
+        # display playback status
         gui.s.addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
         playback_progress = 0
         if time_local != 0:
             playback_progress = time_playback / time_local
-        bar_color = 2
-        if mplayer is None:
-            bar_color = 1
-        progress_bar(playback_progress, 15, 4, bar_color)
         gui.s.addstr(18, 4, "Time: " + secs2str(time_playback)
                 + " of " + secs2str(time_local))
         gui.s.addstr(19, 4, "Time Remaining: " +
                 secs2str(time_local-time_playback))
+
+        # display playback progress bar
+        bar_color = 3   # green
+        if mplayer_start and mplayer is None:
+            bar_color = 1   # yellow
+        if not mplayer_start:
+            bar_color = 2   # red
+        progress_bar(playback_progress, 15, 4, bar_color)
 
         gui.s.refresh()
         time.sleep(.1)          # to kill spinning
@@ -315,6 +330,12 @@ def main():
     mplayer_stdout_file.close()
     mplayer_stderr_file.close()
     restore_screen()
+
+def draw_help(row=2, col=4):
+    """
+    d           download or stop downloading video
+
+    """
 
 
 if __name__ == '__main__':
