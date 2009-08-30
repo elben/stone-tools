@@ -93,10 +93,17 @@ def draw_title(title="Gentile Monitor", border=True):
         gui.s.addch(2, gui.w-1, curses.ACS_RTEE)
 
 def find_video_ptrs():
-    if time.time() - gui.ptr_delay >= 1:
+    delay_time = 1  # seconds
+    if time.time() - gui.ptr_delay >= delay_time:
         ptr_re = re.compile('"[^"]*\.' + FILE_EXT + '\"')
         ptr_files = []
-        paul_url = urllib2.urlopen(URL_PAUL)
+        while True:
+            try:
+                paul_url = urllib2.urlopen(URL_PAUL)
+                break
+            except: 
+                time.sleep(delay_time)
+                pass
         for line in paul_url:
             search = ptr_re.search(line)
             if search is None:
@@ -243,10 +250,10 @@ def main():
                 mplayer.stdin.write('p')    # pause
         elif c == 260:  # left arrow
             if mplayer is not None:
-                mplayer.stdin.write('h')    # small seek left
+                mplayer.stdin.write('h')    # short seek left
         elif c == 261:  # right arrow
             if mplayer is not None:
-                mplayer.stdin.write('j')    # small seek right
+                mplayer.stdin.write('j')    # short seek right
         elif c == 44:   # ,
             if mplayer is not None:
                 mplayer.stdin.write('g')    # medium seek left
@@ -259,6 +266,24 @@ def main():
         elif c == 93:   # ]
             if mplayer is not None:
                 mplayer.stdin.write('l')    # long seek right
+        elif c == 61:   # -
+            if mplayer is not None:
+                mplayer.stdin.write('z')    # short sound sync left
+        elif c == 61:   # =
+            if mplayer is not None:
+                mplayer.stdin.write('x')    # short sound sync right
+        elif c == 57:   # 9
+            if mplayer is not None:
+                mplayer.stdin.write('a')    # medium sound sync left
+        elif c == 48:   # 0
+            if mplayer is not None:
+                mplayer.stdin.write('s')    # medium sound sync right
+        elif c == 55:   # 7
+            if mplayer is not None:
+                mplayer.stdin.write('q')    # long sound sync right
+        elif c == 56:   # 8
+            if mplayer is not None:
+                mplayer.stdin.write('w')    # long sound sync right
 
         # wget process
         if download_file:
