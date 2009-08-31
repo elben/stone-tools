@@ -106,8 +106,7 @@ def find_video_ptrs():
                 paul_url = urllib2.urlopen(URL_PAUL)
                 break
             except: 
-                gui.s.addstr(22, 0,
-                        "Attempting to connect...".center(gui.w))
+                draw_status("Attempting to connect...")
                 gui.s.refresh()
                 time.sleep(delay_time)
                 pass
@@ -259,6 +258,9 @@ def main():
         elif c == 32:   # space bar
             if mplayer is not None:
                 mplayer.stdin.write('p')    # pause
+        elif c == ord('o'):
+            if mplayer is not None:
+                mplayer.stdin.write('o')    # toggle OSD display
         elif c == 260:  # left arrow
             if mplayer is not None:
                 mplayer.stdin.write('h')    # short seek left
@@ -312,7 +314,8 @@ def main():
         # mplayer process
         if (mplayer_start and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
-            mp_args = ["mplayer", "-osdlevel", "0", LOCAL_FILE]
+            mp_args = ["mplayer", "-osdlevel", "0", "-mc", "3",
+                    "-framedrop", "-delay", "-.3", LOCAL_FILE]
             mplayer = sp.Popen(mp_args,
                     stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
                     stdin=sp.PIPE)
@@ -390,6 +393,7 @@ def draw_help(row=3, col=48):
         " d       start/stop download ",
         " m       start/stop mplayer  ",
         " [space] pause video         ",
+        " o       show/hide OSD       ",
         "                             ",
         " -----------seek------------ ",
         "        left  right          ",

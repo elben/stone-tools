@@ -105,7 +105,12 @@ class WGet:
         """Returns size (bytes) of remote file."""
         if time.time() - self.prev_time_http >= self.delay_http:
             # regrab data
-            self.connect()
+            while True:
+                try:
+                    self.connect()
+                    break
+                except:
+                    continue
             self.remote_file_size = int(self.remote_url.info().dict['content-length'])
             self.prev_time_http = time.time()
             self.log("grabbed remote file size: " + str(self.remote_file_size))
