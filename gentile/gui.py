@@ -15,6 +15,7 @@ URL_PAUL = "http://localhost:8888/"
 FILE_EXT = "pt"
 MPLAYER_STDOUT_FILE = "mplayer_stdout"
 MPLAYER_STDERR_FILE = "mplayer_stderr"
+MPLAYER_AV_DELAY = -.3
 
 class gui:
     w = 80
@@ -109,7 +110,6 @@ def find_video_ptrs():
                 draw_status("Attempting to connect...")
                 gui.s.refresh()
                 time.sleep(delay_time)
-                pass
         for line in paul_url:
             search = ptr_re.search(line)
             if search is None:
@@ -314,11 +314,13 @@ def main():
         # mplayer process
         if (mplayer_start and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
+            # TODO: take out hardcoded delay
             mp_args = ["mplayer", "-osdlevel", "0", "-mc", "3",
-                    "-framedrop", "-delay", "-.3", LOCAL_FILE]
+                    "-framedrop", "-delay", str(MPLAYER_AV_DELAY), LOCAL_FILE]
             mplayer = sp.Popen(mp_args,
                     stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
                     stdin=sp.PIPE)
+            a_v_diff = int(1000*MPLAYER_AV_DELAY)    # reset audio/video delay
         elif not mplayer_start and mplayer is not None:
             mplayer.terminate()
             mplayer = None
@@ -331,11 +333,8 @@ def main():
         draw_title()
 
         # display download progress bar
-        bar_color = 3   # green
-        if not wget.alive():
-            bar_color = 1   # yellow
-        if not download_file:
-            bar_color = 2   # red
+        # color:   yellow (wget dead)      red (do not dl)       green (dling)
+        bar_color = 1 if not wget.alive() else (2 if not download_file else 3)
         progress_bar(wget.progress(), 6, 4, bar_color)
         
         # display download stats
@@ -347,7 +346,7 @@ def main():
                 " MB")
         gui.s.addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
                 secs2str(time_remote))
-        gui.s.addstr(11, 4, "Rate: " + str(int(wget.dl_rate())/1024/1024) +
+        gui.s.addstr(11, 4, "Rate: " + str(int(wget.rate())/1024/1024) +
                 " MB/s")
         #gui.s.addstr(12, 4, "Time until catch-up: unimplemented")
 
