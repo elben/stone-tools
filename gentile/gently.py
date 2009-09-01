@@ -9,7 +9,6 @@ import logging
 import logging.handlers
 import time
 
-devnull = open(os.devnull, 'w')
 
 class WGet:
     """
@@ -29,6 +28,7 @@ class WGet:
             pass
         
         self.wget_proc = None
+        self.devnull = open(os.devnull, 'w')     # dump stdin/out to
 
         # set up logging
         if logger is None:
@@ -64,9 +64,9 @@ class WGet:
         self.delay_rate = .26   # seconds
         self.prev_time_rate = -self.delay_rate
 
-        self.prev_sizes = []
-        self.max_history = 3
-        self.rate = 0    # bytes/s
+        self.prev_sizes= []
+        self.max_history = 10
+        self.dl_rate = 0    # bytes/s
 
     def download(self, autokill=True):
         """
@@ -120,7 +120,7 @@ class WGet:
         """Returns size (bytes) of local file."""
         return os.path.getsize(self.local_file)
 
-    def dl_rate(self):
+    def rate(self):
         """
         Returns rate of download in bytes/sec.
         
@@ -128,18 +128,21 @@ class WGet:
         """
 
         if time.time() - self.prev_time_rate >= self.delay_rate:
+            self.prev_time_rate = time.time()
+
+            # save size
             if len(self.prev_sizes) >= self.max_history:
                 del self.prev_sizes[0]
             self.prev_sizes.append(self.size_local())
 
+            # calc new rate
             prev = 0
             total = 0
             for i in range(len(self.prev_sizes)-1):
                 total += self.prev_sizes[i+1] - self.prev_sizes[i]
                 
-            self.rate = total / self.delay_rate / len(self.prev_sizes) 
-            self.prev_time_rate = time.time()
-        return self.rate
+            self.dl_rate = total / self.delay_rate / len(self.prev_sizes) 
+        return self.dl_rate
 
     def finished(self):
         return self.size_remote() == self.size_local()
@@ -189,8 +192,8 @@ class WGet:
         User should never call this. Call download() instead.
         """
         self.wget_proc = subprocess.Popen(['wget', '-c', self.url(), '-O',
-            self.local_file], shell=False, stdout=devnull,
-            stderr=devnull)
+            self.local_file], shell=False, stdout=self.devnull,
+            stderr=self.devnull)
         self.log("wget started.")
 
 class TimeoutException(Exception):
