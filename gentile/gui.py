@@ -102,8 +102,37 @@ def draw_title(title="Gentile Monitor", border=True):
         gui.s.addch(2, 0, curses.ACS_LTEE)
         gui.s.addch(2, gui.w-1, curses.ACS_RTEE)
 
-def draw_status(status="press h for help"):
+def draw_status(status="press 'h' for help"):
     gui.s.addstr(gui.h-2, 1, status.center(gui.w-2))
+
+def draw_help(row=3, col=48):
+    help = [
+        " -----------main------------ ",
+        " q       quit                ",
+        " h       show/hide help      ",
+        " d       start/stop download ",
+        " m       start/stop mplayer  ",
+        " [space] pause video         ",
+        " o       show/hide OSD       ",
+        "                             ",
+        " -----------seek------------ ",
+        "        left  right          ",
+        " short: <--    -->           ",
+        " medium: ,      .            ",
+        " long:   [      ]            ",
+        "                             ",
+        " -------audio sync---------- ",
+        "        left  right          ",
+        " short:  -      =            ",
+        " medium: 9      0            ",
+        " long:   7      8            ",]
+    
+    for h in help:
+        if curses.has_colors():
+            gui.s.addstr(row, col, h, curses.color_pair(4))
+        else:
+            gui.s.addstr(row, col, h)
+        row += 1
 
 def find_video_ptrs():
     delay_time = 1  # seconds
@@ -250,9 +279,11 @@ def main():
     display_help = False
     while True:
         gui.s.erase()
-
+        
         c = gui.s.getch()
         gui.s.addstr(21, 4, str(c))    # display key vals for debug
+        
+        # handle input
         if c == ord('q'):
             wget.terminate()
             if mplayer is not None:
@@ -312,52 +343,56 @@ def main():
             if mplayer is not None:
                 mplayer.stdin.write('w')    # long sound sync right
                 a_v_diff += 500
-
+        
         # wget process
         if download_file:
             wget.download()
         else:
             wget.terminate()
         wget.log_status()
-
+        
         # mplayer process
-        if (mplayer_start and (mplayer == None or mplayer.poll() != None)
-                and wget.size_local() > mplayer_size):
-            mp_args = ["mplayer", "-osdlevel", "0", "-mc", "3", "-framedrop",
-                    "-delay", str(DEFAULT_AV_DELAY), LOCAL_FILE]
+        if ( mplayer_start and
+             ( mplayer == None or mplayer.poll() != None ) and
+             wget.size_local() > mplayer_size ):
+            mp_args = ["mplayer", "-osdlevel", "0", "-mc", "3",
+                       "-framedrop", "-delay",
+                       str(DEFAULT_AV_DELAY), LOCAL_FILE]
             mplayer = sp.Popen(mp_args, stdout=mplayer_stdout_file,
-                    stderr=mplayer_stderr_file, stdin=sp.PIPE)
-            a_v_diff = int(DEFAULT_AV_DELAY*1000)
+                               stderr=mplayer_stderr_file, stdin=sp.PIPE)
+            a_v_diff = int(DEFAULT_AV_DELAY * 1000)
         elif not mplayer_start and mplayer is not None:
             mplayer.terminate()
+            a_v_diff = 0 # reset, since we have no other way to track it
             mplayer = None
-
+        
         # download and playback statistics
         time_local = bytes2secs(wget.size_local())
         time_remote = bytes2secs(wget.size_remote())
         time_playback = mplayer_status(MPLAYER_STDOUT_FILE)
-
+        
         draw_title()
-
+        
         # display download progress bar
-        bar_color = 3   # green
+        bar_color = 3 # green
         if not wget.alive():
-            bar_color = 1   # yellow
+            bar_color = 1 # yellow
         if not download_file:
-            bar_color = 2   # red
+            bar_color = 2 # red
         progress_bar(wget.progress(), 6, 4, bar_color)
         
         # display download stats
         gui.s.addstr(4, 2, 'Download Status', curses.A_UNDERLINE)
-        gui.s.addstr(4, 18, '(' + str(gui.ptr_files[selected_ptr]) + ')')
+        gui.s.addstr(4, 18, '(' + wget.url() + ')')
         gui.s.addstr(9, 4, "Size: " +
-                "{0:0.1f}".format(float(wget.size_local())/1024/1024) + " of " +
-                "{0:0.1f}".format(float(wget.size_remote())/1024/1024) +
-                " MB")
+            "{0:0.1f}".format(float(wget.size_local())/1024/1024) +
+            " of " +
+            "{0:0.1f}".format(float(wget.size_remote())/1024/1024) +
+            " MB")
         gui.s.addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
-                secs2str(time_remote))
+                     secs2str(time_remote))
         gui.s.addstr(11, 4, "Rate: " + str(int(wget.rate())/1024/1024) +
-                " MB/s")
+                     " MB/s")
         #gui.s.addstr(12, 4, "Time until catch-up: unimplemented")
 
         # display playback status
@@ -384,43 +419,11 @@ def main():
         if display_help:
             draw_help()
         gui.s.refresh()
-        time.sleep(.1)          # to kill spinning
-
-    # done playing! remove video file
-    #if os.path.isfile(LOCAL_FILE):
-    #    os.remove(LOCAL_FILE)
-
+        time.sleep(0.1) # to kill spinning
+    
     mplayer_stdout_file.close()
     mplayer_stderr_file.close()
     restore_screen()
-
-def draw_help(row=3, col=48):
-    help = [
-        " -----------main------------ ",
-        " q       quit                ",
-        " h       show/hide help      ",
-        " d       start/stop download ",
-        " m       start/stop mplayer  ",
-        " [space] pause video         ",
-        " o       show/hide OSD       ",
-        "                             ",
-        " -----------seek------------ ",
-        "        left  right          ",
-        " short: <--    -->           ",
-        " medium: ,      .            ",
-        " long:   [      ]            ",
-        "                             ",
-        " -------audio sync---------- ",
-        "        left  right          ",
-        " short:  -      =            ",
-        " medium: 9      0            ",
-        " long:   7      8            ",]
-    for h in help:
-        if curses.has_colors():
-            gui.s.addstr(row, col, h, curses.color_pair(4))
-        else:
-            gui.s.addstr(row, col, h)
-        row += 1
 
 if __name__ == '__main__':
     try:

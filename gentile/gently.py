@@ -9,7 +9,6 @@ import logging
 import logging.handlers
 import time
 
-
 class WGet:
     """
     WGet is an intelligent wrapper around the wget process.
