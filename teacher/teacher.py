@@ -1,8 +1,16 @@
 import os
 import time
 
-VIDEO_DIR = "/var/www/"
-VIDEO_PREFIX = "video_"
+# parse config file
+config_file = "../config/config.conf"
+if len(sys.argv) >= 2:
+    # passed in as first argument
+    config_file = sys.argv[1]
+configs = ConfigParser.ConfigParser()
+configs.read(config_file)
+
+VIDEO_DIR = configs.get("teacher", "video_dir")
+VIDEO_PREFIX = configs.get("teacher", "video_prefix")
 
 def main():
     # initialize 

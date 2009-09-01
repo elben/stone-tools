@@ -3,16 +3,24 @@ import os
 import time
 import socket
 
+# parse config file
+config_file = "../config/config.conf"
+if len(sys.argv) >= 2:
+    # passed in as first argument
+    config_file = sys.argv[1]
+configs = ConfigParser.ConfigParser()
+configs.read(config_file)
+
 # amount the new file must differ by to be considered a new sermon
-FS_DIFF = 0.5
+FS_DIFF = configs.getint("paul", "fs_diff")
 
 # url of teacher
-URL = "http://10.100.1.242/"
+URL = configs.get("paul", "url_teacher")
 
 # various file and directory names
-WEB_DIR = "/var/www"
-SERMON_DIR = "/sermons"
-TEACHER_SYMLINK = "sermon_symlink"
+WEB_DIR = configs.get("paul", "web_dir")
+SERMON_DIR = configs.get("paul", "sermon_dir')
+TEACHER_SYMLINK = configs.get("paul", "teacher_symlink")
 
 # get the ip of the local machine, to put in pointer file
 IP = socket.gethostbyname( socket.gethostname() )

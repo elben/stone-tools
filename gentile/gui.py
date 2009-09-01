@@ -12,6 +12,7 @@ import ConfigParser
 # parse config file
 config_file = "../config/config.conf"
 if len(sys.argv) >= 2:
+    # passed in as first argument
     config_file = sys.argv[1]
 configs = ConfigParser.ConfigParser()
 configs.read(config_file)
@@ -23,6 +24,7 @@ URL_PAUL = configs.get("gentile", "url_paul")
 FILE_EXT = configs.get("gentile", "file_ext")
 MPLAYER_STDOUT_FILE = configs.get("gentile", "mplayer_stdout_file")
 MPLAYER_STDERR_FILE = configs.get("gentile", "mplayer_stderr_file")
+DEFAULT_AV_DELAY = configs.getfloat("gentile", "av_delay")
 
 class gui:
     w = 80
@@ -322,11 +324,10 @@ def main():
         # mplayer process
         if (mplayer_start and (mplayer == None or mplayer.poll() != None)
                 and wget.size_local() > mplayer_size):
-            mp_args = ["mplayer", "-osdlevel", "0", "-mc", "3",
-                    "-framedrop", "-delay", "-.3", LOCAL_FILE]
-            mplayer = sp.Popen(mp_args,
-                    stdout=mplayer_stdout_file, stderr=mplayer_stderr_file,
-                    stdin=sp.PIPE)
+            mp_args = ["mplayer", "-osdlevel", "0", "-mc", "3", "-framedrop",
+                    "-delay", str(DEFAULT_AV_DELAY), LOCAL_FILE]
+            mplayer = sp.Popen(mp_args, stdout=mplayer_stdout_file,
+                    stderr=mplayer_stderr_file, stdin=sp.PIPE)
         elif not mplayer_start and mplayer is not None:
             mplayer.terminate()
             mplayer = None

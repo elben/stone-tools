@@ -3,12 +3,20 @@ import os
 import time
 import random
 
-TEACHER_IP = "10.100.1.242"
-REMOTE_DIR = "/var/www"
-NFS_DIR = "/teacher"
+# parse config file
+config_file = "../config/config.conf"
+if len(sys.argv) >= 2:
+    # passed in as first argument
+    config_file = sys.argv[1]
+configs = ConfigParser.ConfigParser()
+configs.read(config_file)
 
-HDPVR_DEVICE = "video0"
-VIDEO_PREFIX = "video_"
+TEACHER_IP = configs.get("disciple", "teacher_ip")
+REMOTE_DIR = configs.get("disciple", "remote_dir")
+NFS_DIR = configs.get("disciple", "nfs_dir")
+
+HDPVR_DEVICE = configs.get("disciple", "hdpvr_device")
+VIDEO_PREFIX = configs.get("disciple", "video_prefix")
 
 EXIST_FILE = os.path.join(NFS_DIR, "exist_")
 EXIST_VERIFIED_FILE = os.path.join(NFS_DIR, "exist_verified_")

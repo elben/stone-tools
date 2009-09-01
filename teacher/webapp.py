@@ -5,15 +5,20 @@ from libwebapp import *
 import cgi
 import cgitb
 
-##############
-# Teacher Control Setup
-#
-# Please set these variables!
-##############
-SIGNALS_DIR = "/var/www"    # path to signals directory
-REFRESH_RATE = 3            # refresh every num of seconds
-                            # if <= 0, then never refresh automatically
-                            # NOTE: currently unimplemented.
+# parse config file
+config_file = "../config/config.conf"
+if len(sys.argv) >= 2:
+    # passed in as first argument
+    config_file = sys.argv[1]
+configs = ConfigParser.ConfigParser()
+configs.read(config_file)
+
+SIGNALS_DIR = configs.get("webapp", "signals_dir")
+
+# refresh every num of seconds
+# if <= 0, then never refresh automatically
+# NOTE: currently unimplemented.
+REFRESH_RATE = configs.getint("webapp", "refresh_rate")
 
 ##############
 # No need to touch anything below
