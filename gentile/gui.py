@@ -19,7 +19,6 @@ configs.read(config_file)
 
 VIDEO_BITRATE = configs.getint("gentile", "video_bitrate") # kbits / s
 LOCAL_FILE = configs.get("gentile", "local_file")
-#URL_PAUL = "http://10.100.1.243"
 URL_PAUL = configs.get("gentile", "url_paul")
 FILE_EXT = configs.get("gentile", "file_ext")
 MPLAYER_STDOUT_FILE = configs.get("gentile", "mplayer_stdout_file")
@@ -356,7 +355,7 @@ def main():
                 " MB")
         gui.s.addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
                 secs2str(time_remote))
-        gui.s.addstr(11, 4, "Rate: " + str(int(wget.dl_rate())/1024/1024) +
+        gui.s.addstr(11, 4, "Rate: " + str(int(wget.rate())/1024/1024) +
                 " MB/s")
         #gui.s.addstr(12, 4, "Time until catch-up: unimplemented")
 
