@@ -15,11 +15,11 @@ configs.read(config_file)
 FS_DIFF = configs.getint("paul", "fs_diff")
 
 # url of teacher
-URL = configs.get("paul", "url_teacher")
+URL_TEACHER = configs.get("paul", "url_teacher")
 
 # various file and directory names
 WEB_DIR = configs.get("paul", "web_dir")
-SERMON_DIR = configs.get("paul", "sermon_dir')
+SERMON_DIR = configs.get("paul", "sermon_dir")
 TEACHER_SYMLINK = configs.get("paul", "teacher_symlink")
 
 # get the ip of the local machine, to put in pointer file
@@ -42,7 +42,7 @@ def main():
     # create the object that will download, but only if the symlink exists
     while True:
         try:
-            wget = gently.WGet(URL, TEACHER_SYMLINK,
+            wget = gently.WGet(URL_TEACHER, TEACHER_SYMLINK,
                                sermon_filename, delay_wget = 5)
             wget.connect()
             break
@@ -89,7 +89,7 @@ def main():
             # reconnect since the file download location changed
             while True:
                 try:
-                    wget = gently.WGet(URL, TEACHER_SYMLINK,
+                    wget = gently.WGet(URL_TEACHER, TEACHER_SYMLINK,
                                        sermon_filename, delay_wget = 5)
                     wget.connect()
                     break

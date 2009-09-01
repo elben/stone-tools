@@ -25,6 +25,13 @@ ARM_VERIFIED_FILE = os.path.join(NFS_DIR, "arm_verified_")
 RECORD_FILE = os.path.join(NFS_DIR, "record_")
 RECORD_VERIFIED_FILE = os.path.join(NFS_DIR, "record_verified_")
 
+COMM_FILES = [ EXIST_FILE,
+               EXIST_VERIFIED_FILE,
+               ARM_FILE,
+               ARM_VERIFIED_FILE,
+               RECORD_FILE,
+               RECORD_VERIFIED_FILE ]
+
 # block size to read from the device
 READ_SIZE = 1024 * 400 # 400Kb
 
@@ -108,36 +115,12 @@ def main():
         print "Disarming and stopping record..."
         
         # remove all leftover signals to reset state
-        try:
-            os.remove(ARM_FILE + mac_address)
-        except:
-            pass
-        
-        try:
-            os.remove(ARM_VERIFIED_FILE + mac_address)
-        except:
-            pass
-        
-        try:
-            os.remove(RECORD_FILE + mac_address)
-        except:
-            pass
-        
-        try:
-            os.remove(RECORD_VERIFIED_FILE + mac_address)
-        except:
-            pass
-        
-        try:
-            os.remove(EXIST_FILE + mac_address)
-        except:
-            pass
-        
-        try:
-            os.remove(EXIST_VERIFIED + mac_address)
-        except:
-            pass
-        
+        for file in COMM_FILES:
+            try:
+                os.remove(file + mac_address)
+            except:
+                pass
+                
         # close the stream and file
         video_stream.close()
         video_file.close()
