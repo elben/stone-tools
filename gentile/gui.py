@@ -327,6 +327,7 @@ def main():
                     "-delay", str(DEFAULT_AV_DELAY), LOCAL_FILE]
             mplayer = sp.Popen(mp_args, stdout=mplayer_stdout_file,
                     stderr=mplayer_stderr_file, stdin=sp.PIPE)
+            a_v_diff = int(DEFAULT_AV_DELAY*1000)
         elif not mplayer_start and mplayer is not None:
             mplayer.terminate()
             mplayer = None
