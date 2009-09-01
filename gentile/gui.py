@@ -7,14 +7,22 @@ import os
 import time
 import urllib2
 import re
+import ConfigParser
 
-VIDEO_BITRATE = 4500 # kbits / s
-LOCAL_FILE = "sermon.ts"
+# parse config file
+config_file = "../config/config.conf"
+if len(sys.argv) >= 2:
+    config_file = sys.argv[1]
+configs = ConfigParser.ConfigParser()
+configs.read(config_file)
+
+VIDEO_BITRATE = configs.getint("gentile", "video_bitrate") # kbits / s
+LOCAL_FILE = configs.get("gentile", "local_file")
 #URL_PAUL = "http://10.100.1.243"
-URL_PAUL = "http://localhost:8888/"
-FILE_EXT = "pt"
-MPLAYER_STDOUT_FILE = "mplayer_stdout"
-MPLAYER_STDERR_FILE = "mplayer_stderr"
+URL_PAUL = configs.get("gentile", "url_paul")
+FILE_EXT = configs.get("gentile", "file_ext")
+MPLAYER_STDOUT_FILE = configs.get("gentile", "mplayer_stdout_file")
+MPLAYER_STDERR_FILE = configs.get("gentile", "mplayer_stderr_file")
 
 class gui:
     w = 80
