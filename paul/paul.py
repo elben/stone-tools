@@ -42,12 +42,13 @@ def main():
     # create the object that will download, but only if the symlink exists
     while True:
         try:
-            wget = gently.WGet(URL_TEACHER, TEACHER_SYMLINK,
+            wget = gently.WGet(URL_TEACHER, TEACHER_SYMLINK, 
                                sermon_filename, delay_wget = 5)
-            wget.connect()
+            wget.download()
             break
         except:
             print "Waiting for teacher to create symlink..."
+            wget.terminate()
             time.sleep(0.5)
     
     print "Starting download to", "'" + sermon_filename + "'"
@@ -64,8 +65,8 @@ def main():
         prev_fs = fs
         fs = wget.size_remote()
 
-        # if the file we're trying to download is 50% smaller than the last one
-        # or if there is not a file at all
+        # if the file we're trying to download is much smaller
+        # than the last one, or if there is not a file at all
         if fs <= FS_DIFF * prev_fs:
             # create a new file name for it
             sermon_num += 1
@@ -96,7 +97,7 @@ def main():
                 except:
                     print "Waiting for teacher to create symlink..."
                     time.sleep(0.5)
-    
+            
         # download the file (new or otherwise)
         wget.download(autokill = True)
         wget.log_status()
@@ -115,4 +116,3 @@ def create_pointer_file(web_dir, sermon_dir, name, ip):
 
 if __name__ == "__main__":
     main()
-
