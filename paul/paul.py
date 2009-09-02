@@ -48,7 +48,6 @@ def main():
             break
         except:
             print "Waiting for teacher to create symlink..."
-            wget.terminate()
             time.sleep(0.5)
     
     print "Starting download to", "'" + sermon_filename + "'"
