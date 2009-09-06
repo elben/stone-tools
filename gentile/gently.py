@@ -73,6 +73,13 @@ class WGet:
 
         If autokill is True, then WGet will kill and restart the
         wget process every delay_wget seconds.
+        
+        Calling download() does not guarantee that the file will download
+        completely. Thus, the user should call download() continuously to
+        download a file. Example:
+
+            while not wget.finished():
+                wget.download()
         """
         enough_delay = time.time() - self.prev_time_wget >= self.delay_wget
         if not self.alive() and enough_delay:
@@ -104,12 +111,7 @@ class WGet:
         """Returns size (bytes) of remote file."""
         if time.time() - self.prev_time_http >= self.delay_http:
             # regrab data
-            while True:
-                try:
-                    self.connect()
-                    break
-                except:
-                    continue
+            self.connect(timeout=10)
             self.remote_file_size = int(self.remote_url.info().dict['content-length'])
             self.prev_time_http = time.time()
             self.log("grabbed remote file size: " + str(self.remote_file_size))
@@ -143,6 +145,14 @@ class WGet:
             self.dl_rate = total / self.delay_rate / len(self.prev_sizes) 
         return self.dl_rate
 
+    def remote_file_exists(self):
+        """Returns True if the remote file exists; False otherwise."""
+        try:
+            self.connect()
+            return True
+        except:
+            return False
+        
     def finished(self):
         return self.size_remote() == self.size_local()
 
