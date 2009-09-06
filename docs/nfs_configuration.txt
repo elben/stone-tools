@@ -1,0 +1,50 @@
+teacher:
+teacher is the NFS server.  It has two main config files:
+
+/etc/exports
+    Controls which directory gets defined as the directory that disciples can
+    mount.  Each line is formatted as such:
+        <directory> <disciple1 ip>(<permissions>)
+	<directory> <disciple2 ip>(<permissions>)
+    <directory> is the directory we are allowing the disciples to mount.  This
+        should be the directory apache is serving to the web.
+    <discipleN ip> is the IP address of each disciple.
+    <permissions> is rw, allowing both read and write access to each disciple.
+        They need both read and write permissions to function, at a minimum.
+
+    <discipleN ip> will be most commonly changed, each IP must be the address
+    of one of the disciples.
+
+/etc/hosts.allow
+    This file allows certain IP addresses to connect to our NFS server, but it
+    only allows those we specify.  This single line takes the format:
+        portmap: <disciple1 ip> , <disciple2 ip>, ...
+    To allow access to each disciple, simply add/change the IPs on this line
+    to the IPs they each use.
+
+disciple:
+The only file in disciple that affects the NFS share is /etc/fstab.
+
+/etc/fstab
+    This file changes where the disciple looks for an NFS server and how it
+    attempts to mount the share.  It takes the format:
+        <teacher ip>:/<teacher shared directory> <mount point> <type> <options>
+    
+    <teacher ip> is the IP address assigned to teacher, our NFS server.
+    <teacher shared directory> is the directory on teacher that we decided
+        to share with the disciples.
+    <mount point> is the directory on the disciple where we want to mount the 
+        remote drive (the one on teacher)
+    <type> is the type of mount we are doing, in this case, "nfs" sans quotes
+    <options> should always be: "hard,intr,actimeo=0", sans quote marks
+
+After these options are reconfigured, teacher must (at a minimum) restart the
+NFS server, and the disciples must reboot.
+
+To restart the NFS server on teacher:
+   sudo /etc/init.d/nfs-kernel-server restart
+
+To reboot the disciples:
+   sudo reboot
+
+After these take place, all should be well!
