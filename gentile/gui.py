@@ -381,6 +381,11 @@ def main():
                     LOCAL_FILE]
             mplayer = sp.Popen(mp_args, stdout=mplayer_stdout_file,
                                stderr=mplayer_stderr_file, stdin=sp.PIPE)
+
+            if time_playback == 0:
+                # if at beginning of video, start mplayer paused
+                mplayer.stdin.write('p')    # pause
+
             a_v_diff = int(DEFAULT_AV_DELAY * 1000)
         elif not mplayer_start and mplayer is not None:
             mplayer.terminate()
@@ -388,6 +393,8 @@ def main():
             mplayer = None
         
         # download and playback statistics
+        rate = wget.rate()
+        dl_live_ratio = rate/(VIDEO_BITRATE * 128)  # download vs live ratio
         time_local = bytes2secs(wget.size_local())
         time_remote = bytes2secs(wget.size_remote())
         try:
@@ -425,8 +432,9 @@ def main():
             " MB")
         addstr(10, 4, "Time: " + secs2str(time_local) + " of " +
                      secs2str(time_remote))
-        addstr(11, 4, "Rate: " + str(int(wget.rate())/1024/1024) +
-                     " MB/s")
+        addstr(11, 4, "Rate: " + str(int(rate)/1024/1024) +
+                     " MB/s (" + str("%.1f"%dl_live_ratio) +
+                     " download/live ratio)")
         #addstr(12, 4, "Time until catch-up: unimplemented")
 
         # display playback status
