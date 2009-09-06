@@ -40,7 +40,8 @@ def init_curses():
     try:
         curses.curs_set(0)   # hide cursor
     except: pass
-    curses.cbreak()      # no waiting until [Enter]
+    #curses.cbreak()      # no waiting until [Enter]
+    curses.raw            # so we capture CTRL+KEY
     if curses.has_colors():
         curses.start_color()
         curses.use_default_colors()
@@ -56,6 +57,7 @@ def init_curses():
 def addstr(r, c, s, attr=None):
     # attr is not only color, but to make things easier, don't print
     # attr styles if we don't have colors
+    gui.s.addstr(r, c, " "*len(s))
     if curses.has_colors() and attr is not None:
         gui.s.addstr(r, c, s, attr)
     else:
@@ -224,7 +226,7 @@ def video_select():
     selected_ptr = 0
     selection = find_video_ptrs()
     while True:
-        gui.s.erase()
+        #gui.s.erase()
         draw_selector(selection, selected_ptr)
         c = gui.s.getch()
         if c == curses.KEY_DOWN:
@@ -294,6 +296,7 @@ def main():
     time_playback = 0               # secs into video (from mplayer status)
     display_help = False
     continue_loop = True
+    super_mode = False
     while continue_loop:
         gui.s.erase()
         
@@ -303,7 +306,8 @@ def main():
             addstr(21, 4, str(c))    # display key vals for debug
             
             # handle input
-            if c == ord('q'):
+            #if c == ord('q'):
+            if c == 17:   # Ctrl + q
                 wget.terminate()
                 if mplayer is not None:
                     mplayer.terminate()
@@ -314,6 +318,8 @@ def main():
                 mplayer_start = not mplayer_start
             elif c == ord('h'):
                 display_help = not display_help
+            elif c == 19:   # Ctrl + S
+                super_mode = True
             elif c == 32:   # space bar
                 if mplayer is not None:
                     mplayer.stdin.write('p')    # pause
