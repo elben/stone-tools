@@ -41,7 +41,7 @@ def init_curses():
         curses.curs_set(0)   # hide cursor
     except: pass
     #curses.cbreak()      # no waiting until [Enter]
-    curses.raw            # so we capture CTRL+KEY
+    curses.raw()            # so we capture CTRL+KEY
     if curses.has_colors():
         curses.start_color()
         curses.use_default_colors()
@@ -55,9 +55,9 @@ def init_curses():
     gui.s.keypad(1)
 
 def addstr(r, c, s, attr=None):
+    gui.s.addstr(r, c, " "*len(s))  # clear line
     # attr is not only color, but to make things easier, don't print
     # attr styles if we don't have colors
-    gui.s.addstr(r, c, " "*len(s))
     if curses.has_colors() and attr is not None:
         gui.s.addstr(r, c, s, attr)
     else:
@@ -122,7 +122,7 @@ def draw_status(status="press 'h' for help"):
 def draw_help(row=3, col=48):
     help = [
         " -----------main------------ ",
-        " q       quit                ",
+        " CTRL+q  quit                ",
         " h       show/hide help      ",
         " d       start/stop download ",
         " m       start/stop mplayer  ",
@@ -226,17 +226,18 @@ def video_select():
     selected_ptr = 0
     selection = find_video_ptrs()
     while True:
-        #gui.s.erase()
         draw_selector(selection, selected_ptr)
         c = gui.s.getch()
         if c == curses.KEY_DOWN:
             selected_ptr += 1
         elif c == curses.KEY_UP:
             selected_ptr -= 1
+        elif c == 3:   # CTRL+c: emergency exit
+            sys.exit()
+            break
         elif c == 10:
             # keypress ENTER
             break
-        addstr(20, 1, str(c))
         time.sleep(.02)
     selected_ptr %= len(gui.ptr_files) 
     return selected_ptr
@@ -303,15 +304,18 @@ def main():
         c = 0
         while c != -1:
             c = gui.s.getch()
-            addstr(21, 4, str(c))    # display key vals for debug
+            if super_mode:
+                addstr(21, 4, "keypress: " + str(c))    # display key vals for debug
             
             # handle input
             #if c == ord('q'):
-            if c == 17:   # Ctrl + q
+            if c == 17 or c == 3:      # CTRL+q or CTRL+c
                 wget.terminate()
                 if mplayer is not None:
                     mplayer.terminate()
                 continue_loop = False
+            elif c == 19:    # CTRL+q
+                super_mode = not super_mode
             elif c == ord('d'):
                 download_file = not download_file 
             elif c == ord('m'):
@@ -423,13 +427,11 @@ def main():
         if not download_file:
             addstr(4, 24, 'off', curses.color_pair(2))
             addstr(4, 27, ')')
-        #elif not wget.alive():
-        #    addstr(4, 24, 'pause', curses.color_pair(1))
-        #    addstr(4, 29, ')')
         else:
             addstr(4, 24, 'on', curses.color_pair(3))
             addstr(4, 26, ')')
-        addstr(4, 29, '(' + wget.url().lstrip('http://') + ')')
+        if super_mode:
+            addstr(4, 29, '(' + wget.url().lstrip('http://') + ')')
 
         addstr(9, 4, "Size: " +
             "{0:0.1f}".format(float(wget.size_local())/1024/1024) +
@@ -441,7 +443,6 @@ def main():
         addstr(11, 4, "Rate: " + str(int(rate)/1024/1024) +
                      " MB/s (" + str("%.1f"%dl_live_ratio) +
                      " download/live ratio)")
-        #addstr(12, 4, "Time until catch-up: unimplemented")
 
         # display playback status
         addstr(13, 2, 'Playback Status', curses.A_UNDERLINE)
@@ -466,7 +467,11 @@ def main():
             playback_progress = 0
         progress_bar(playback_progress, 15, 4)
 
-        draw_status()
+        if super_mode:
+            draw_status("press 'h' for help (super mode)")
+        else:
+            draw_status()
+
         if display_help:
             draw_help()
         gui.s.refresh()
