@@ -1,0 +1,4 @@
+How to set up config files:
+
+1) $ cp default.conf config.conf
+2) Edit the config file.
