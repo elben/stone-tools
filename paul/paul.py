@@ -1,7 +1,9 @@
 import gently
 import os
+import sys
 import time
 import socket
+import ConfigParser
 
 # parse config file
 config_file = "../config/config.conf"
@@ -12,7 +14,7 @@ configs = ConfigParser.ConfigParser()
 configs.read(config_file)
 
 # amount the new file must differ by to be considered a new sermon
-FS_DIFF = configs.getint("paul", "fs_diff")
+FS_DIFF = configs.getfloat("paul", "fs_diff")
 
 # url of teacher
 URL_TEACHER = configs.get("paul", "url_teacher")
