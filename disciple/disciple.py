@@ -1,7 +1,9 @@
 import subprocess as sp
 import os
+import sys
 import time
 import random
+import ConfigParser
 
 # parse config file
 config_file = "../config/config.conf"
@@ -25,7 +27,8 @@ ARM_VERIFIED_FILE = os.path.join(NFS_DIR, "arm_verified_")
 RECORD_FILE = os.path.join(NFS_DIR, "record_")
 RECORD_VERIFIED_FILE = os.path.join(NFS_DIR, "record_verified_")
 
-COMM_FILES = [ EXIST_FILE,
+# for simplified signal file removal
+SIGNAL_FILES = [ EXIST_FILE,
                EXIST_VERIFIED_FILE,
                ARM_FILE,
                ARM_VERIFIED_FILE,
@@ -36,6 +39,9 @@ COMM_FILES = [ EXIST_FILE,
 READ_SIZE = 1024 * 400 # 400Kb
 
 def main():
+    # flags
+    removed_signal_files = False
+    
     while True:
         # pause before continuing, at the top to prevent spamming messages
         time.sleep(0.5)
@@ -63,7 +69,19 @@ def main():
         if mac_address == None:
             print "No suitable MAC adress found, using random file name"
             mac_address = str( random.uniform(100000000000, 999999999999) )
-        
+
+        # append the mac address to each file, for easy removal
+        for i in range( len(SIGNAL_FILES) ):
+            SIGNAL_FILES[i] = SIGNAL_FILES[i] + mac_address
+            
+        # remove old signal files, if any
+        if not removed_signal_files:
+            removed_signal_files = True
+            
+            print "Removing old signal files..."
+            remove_files(SIGNAL_FILES)
+            print "Signal files removed"
+            
         # send 'exist' signal to let teacher know disciple exists
         send_signal(EXIST_FILE, mac_address)
         
@@ -115,18 +133,22 @@ def main():
         print "Disarming and stopping record..."
         
         # remove all leftover signals to reset state
-        for file in COMM_FILES:
-            try:
-                os.remove(file + mac_address)
-            except:
-                pass
-                
+        print "Removing any leftover signal files..."
+        remove_files(SIGNAL_FILES)
+        
         # close the stream and file
         video_stream.close()
         video_file.close()
         
         print "Done recording!"
         print ""
+
+def remove_files(file_list):
+    for file in file_list:
+        try:
+            os.remove(file)
+        except:
+            pass
 
 def send_signal(signal, mac_address):
     open(signal + mac_address, "a").close()
