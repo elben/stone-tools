@@ -24,6 +24,8 @@ FILE_EXT = configs.get("gentile", "file_ext")
 MPLAYER_STDOUT_FILE = configs.get("gentile", "mplayer_stdout_file")
 MPLAYER_STDERR_FILE = configs.get("gentile", "mplayer_stderr_file")
 DEFAULT_AV_DELAY = configs.getfloat("gentile", "av_delay")
+OSDLEVEL = configs.getint("gentile", "osdlevel")
+MAX_AV_CORRECTION = configs.getint("gentile", "max_av_correction")
 
 class gui:
     w = 80
@@ -355,9 +357,9 @@ def main():
         if ( mplayer_start and
              ( mplayer == None or mplayer.poll() != None ) and
              wget.size_local() > mplayer_size ):
-            mp_args = ["mplayer", "-osdlevel", "0", "-mc", "3",
-                       "-framedrop", "-delay",
-                       str(DEFAULT_AV_DELAY), LOCAL_FILE]
+            mp_args = ["mplayer", "-osdlevel", str(OSDLEVEL), "-mc",
+                    str(MAX_AV_CORRECTION), "-framedrop", "-delay",
+                    str(DEFAULT_AV_DELAY), LOCAL_FILE]
             mplayer = sp.Popen(mp_args, stdout=mplayer_stdout_file,
                                stderr=mplayer_stderr_file, stdin=sp.PIPE)
             a_v_diff = int(DEFAULT_AV_DELAY * 1000)
@@ -419,7 +421,7 @@ def main():
         if display_help:
             draw_help()
         gui.s.refresh()
-        time.sleep(0.1) # to kill spinning
+        time.sleep(0.05) # to kill spinning
     
     mplayer_stdout_file.close()
     mplayer_stderr_file.close()
