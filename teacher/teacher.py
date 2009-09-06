@@ -1,5 +1,7 @@
 import os
+import sys
 import time
+import ConfigParser
 
 # parse config file
 config_file = "../config/config.conf"
