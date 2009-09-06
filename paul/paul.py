@@ -24,8 +24,8 @@ WEB_DIR = configs.get("paul", "web_dir")
 SERMON_DIR = configs.get("paul", "sermon_dir")
 TEACHER_SYMLINK = configs.get("paul", "teacher_symlink")
 
-# get the ip of the local machine, to put in pointer file
-IP = socket.gethostbyname( socket.gethostname() )
+# set the ip of the local machine, to put in pointer file
+REPORTED_IP = configs.get("paul", "reported_ip")
 
 def main():
     # create sermon directory if it doesn't exist
@@ -54,7 +54,7 @@ def main():
     
     print "Starting download to", "'" + sermon_filename + "'"
     print "Creating pointer file in '" + WEB_DIR + "'"
-    create_pointer_file(WEB_DIR, SERMON_DIR, filename, IP)
+    create_pointer_file(WEB_DIR, SERMON_DIR, filename, REPORTED_IP)
     
     # main loop
     fs = wget.size_remote()
@@ -86,7 +86,7 @@ def main():
             print "Creating pointer file in '" + WEB_DIR + "'"
         
             # create the pointer file, which is downloaded by gentile
-            create_pointer_file(WEB_DIR, SERMON_DIR, filename, IP)
+            create_pointer_file(WEB_DIR, SERMON_DIR, filename, REPORTED_IP)
         
             # reconnect since the file download location changed
             while True:
