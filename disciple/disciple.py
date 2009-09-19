@@ -29,11 +29,11 @@ RECORD_VERIFIED_FILE = os.path.join(NFS_DIR, "record_verified_")
 
 # for simplified signal file removal
 SIGNAL_FILES = [ EXIST_FILE,
-               EXIST_VERIFIED_FILE,
-               ARM_FILE,
-               ARM_VERIFIED_FILE,
-               RECORD_FILE,
-               RECORD_VERIFIED_FILE ]
+                 EXIST_VERIFIED_FILE,
+                 ARM_FILE,
+                 ARM_VERIFIED_FILE,
+                 RECORD_FILE,
+                 RECORD_VERIFIED_FILE ]
 
 # block size to read from the device
 READ_SIZE = 1024 * 400 # 400Kb
@@ -79,7 +79,8 @@ def main():
             removed_signal_files = True
             
             print "Removing old signal files..."
-            remove_files(SIGNAL_FILES)
+            for file in SIGNAL_FILES:
+                rm(file)
             print "Signal files removed"
             
         # send 'exist' signal to let teacher know disciple exists
@@ -91,8 +92,7 @@ def main():
             time.sleep(0.2)
         print "Existence confirmed"
         
-        if os.path.isfile(EXIST_FILE + mac_address):
-            os.remove(EXIST_FILE + mac_address)  # remove 'exist' signal
+        rm(EXIST_FILE + mac_address)  # remove 'exist' signal
         
         video_file_name = os.path.join(NFS_DIR, VIDEO_PREFIX + mac_address)
         
@@ -116,7 +116,7 @@ def main():
         print "Got record signal"
             
         # it's go-time, send a 'record_verified' signal
-        print ""
+        print
         send_signal(RECORD_VERIFIED_FILE, mac_address)
         
         # do the actual recording
@@ -134,7 +134,8 @@ def main():
         
         # remove all leftover signals to reset state
         print "Removing any leftover signal files..."
-        remove_files(SIGNAL_FILES)
+        for file in SIGNAL_FILES:
+            rm(file)
         
         # close the stream and file
         video_stream.close()
@@ -143,12 +144,12 @@ def main():
         print "Done recording!"
         print ""
 
-def remove_files(file_list):
-    for file in file_list:
-        try:
-            os.remove(file)
-        except:
-            pass
+def rm(file):
+    """Remove a file or directory, as long as it exists"""
+    if os.path.isfile(file) or os.path.islink(file):
+        os.remove(file)
+    elif os.path.isdir(file):
+        os.rmdir(file)
 
 def send_signal(signal, mac_address):
     open(signal + mac_address, "a").close()

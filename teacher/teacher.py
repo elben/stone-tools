@@ -87,10 +87,7 @@ def update_symlink(link_name, cur_link, current_files, bad_files):
                 cur_link = file[0]
                 
                 # remove old link if it exists
-                try:
-                    os.remove(link_name)
-                except:
-                    pass
+                rm(link_name)
                 
                 # create new symlink
                 os.symlink(cur_link, link_name)
@@ -98,6 +95,13 @@ def update_symlink(link_name, cur_link, current_files, bad_files):
                 break
     
     return cur_link
+
+def rm(file):
+    """Remove a file or directory, as long as it exists"""
+    if os.path.isfile(file) or os.path.islink(file):
+        os.remove(file)
+    elif os.path.isdir(file):
+        os.rmdir(file)
 
 def get_video_files(dir, prefix):
     video_files = []
