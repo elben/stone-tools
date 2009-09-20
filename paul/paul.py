@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import gently
 import os
 import sys

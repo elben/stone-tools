@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import curses
 import sys
 import traceback

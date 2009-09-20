@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import subprocess as sp
 import os
 import sys
