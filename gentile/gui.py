@@ -191,7 +191,7 @@ def draw_selector(selection, selected_row=0):
 
 def mplayer_status(file, seek=1024):
     """Returns string in HH:MM:SS format."""
-    mp_status_re = re.compile("A: +[0-9]+\.[0-9] V")
+    mp_status_re = re.compile("A:\s*[0-9]+\.[0-9]\s*V")
       
     with open(file, "r") as f:
         # find pos to seek to; make sure it is legal pos
@@ -205,20 +205,21 @@ def mplayer_status(file, seek=1024):
             return int(float(last))
         raise Exception("Did not find playback status.")
 
-def secs2str(secs):
-    secs = int(secs)
-    hrs = secs / 3600
-    secs -= hrs * 3600
-    mins = secs / 60
-    secs -= mins * 60
+def secs2str(total_secs):
+    total_secs = int(total_secs)
+    hrs = total_secs / 3600
+    #total_secs -= hrs * 3600
+    mins = (total_secs - (hrs * 3600)) / 60
+    #total_secs -= mins * 60
+    secs = (total_secs - (hrs * 3600) - (mins * 60))
     return "{0}:{1:02}:{2:02}".format(hrs, mins, secs)
     #return str(hrs) + ":" + str(mins) + ":" + str(secs)
 
 def bytes2secs(bytes):
-    return float(bytes)/(float(VIDEO_BITRATE)/8.0)/1000
+    return float(bytes)/(float(VIDEO_BITRATE)/8.0)/1024
 
 def secs2bytes(secs):
-    return float(secs) * float(VIDEO_BITRATE) / 8.0 * 1000
+    return float(secs) * float(VIDEO_BITRATE) / 8.0 * 1024
 
 def video_select():
     """Select a pt file from URL_PAUL directory."""
