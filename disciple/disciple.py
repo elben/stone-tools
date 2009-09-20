@@ -112,7 +112,11 @@ def main():
         # if it's not go-time yet, throw data away but be ready
         print "Waiting for 'record' signal..."
         while not get_signal(RECORD_FILE, mac_address):
-            video_stream.read(READ_SIZE)
+            try:
+                video_stream.read(READ_SIZE)
+            except:
+                continue
+                
         print "Got record signal"
             
         # it's go-time, send a 'record_verified' signal
