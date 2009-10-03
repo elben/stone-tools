@@ -7,7 +7,7 @@ import ConfigParser
 
 # parse config file
 config_file = "../config/config.conf"
-if len(sys.argv) >= 2:
+if len(sys.argv) >= 2 and sys.argv[1] != '':
     # passed in as first argument
     config_file = sys.argv[1]
 configs = ConfigParser.ConfigParser()
