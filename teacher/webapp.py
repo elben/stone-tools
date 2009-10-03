@@ -4,9 +4,11 @@
 from libwebapp import *
 import cgi
 import cgitb
+import sys
+import ConfigParser
 
 # parse config file
-config_file = "../config/config.conf"
+config_file = "config.conf"
 if len(sys.argv) >= 2:
     # passed in as first argument
     config_file = sys.argv[1]
