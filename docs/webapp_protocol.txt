@@ -29,25 +29,6 @@ In the perspective of disciple:
   webapp signaled arm    <==> webapp exists and 'arm' received
   webapp signaled record <==> webapp signaled arm and 'record' received
 
-  1) disciple sends    'exist' when it finds HD PVR
-  2) webapp   receives 'exist'
-  3) webapp   sends    'exist_verified'
-  4) disciple receives 'exist_verified'
-  5) webapp   sends    'arm'
-  6) disciple receives 'arm' and arms itself
-  7) disciple sends    'arm_verified'
-  8) webapp   receives 'arm_verified'
-  9) webapp   removes  'arm'
- 10) webapp   sends    'record'
- 11) disciple receives 'record' and begins recording
- 12) disciple sends    'record_verified'
- 13) webapp   receives 'record_verified'
- 14) webapp   removes  'record' when want to stop recording
- 15) webapp   removes  'exist_verified'
- 16) disciple removes  'arm_verified'
- 17) disciple removes  'record_verified'
- 18) disciple removes  'exist' signal when it kills itself
-
 Main Loop:
  forever:
   1) disciple sends    'exist' when it finds HD PVR
@@ -68,4 +49,18 @@ Main Loop:
  16) webapp   removes  'exist_verified'
  17) disciple removes  'arm_verified'
  18) disciple removes  'record_verified'
+
+TODO: IMPLEMENT SAFETY PROTOCOL:
+ 1) all is well (in any state)
+ 2) disciple crashes
+ 3) teacher realizes this and rm all signals disciple sent
+ 4) teacher sends 'crash' signal
+ 5) webapp receives 'crash' signal, notifies user
+ 6) webapp rms all signals webapp created for the crashed disciple (e.g. 'record')
+ 7) webapp erases all knowledge of this crashed disciple from internal state, except
+    knowledge of crash
+ 8) disciple comes back online
+ 9) teacher sees disciple alive by new 'exist' signal
+10) teacher rms 'crash' signal
+11) webapp treats now-alive disciple normally
 
