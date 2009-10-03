@@ -71,7 +71,7 @@ def main():
         if mac_address == None:
             print "No suitable MAC adress found, using random file name"
             mac_address = str( random.uniform(100000000000, 999999999999) )
-
+        
         # append the mac address to each file, for easy removal
         for i in range( len(SIGNAL_FILES) ):
             SIGNAL_FILES[i] = SIGNAL_FILES[i] + mac_address
@@ -93,8 +93,6 @@ def main():
         while not get_signal(EXIST_VERIFIED_FILE, mac_address):
             time.sleep(0.2)
         print "Existence confirmed"
-        
-        rm(EXIST_FILE + mac_address)  # remove 'exist' signal
         
         video_file_name = os.path.join(NFS_DIR, VIDEO_PREFIX + mac_address)
         
@@ -148,7 +146,7 @@ def main():
         video_file.close()
         
         print "Done recording!"
-        print ""
+        print
 
 def rm(file):
     """Remove a file or directory, as long as it exists"""
