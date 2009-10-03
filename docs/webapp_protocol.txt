@@ -29,6 +29,25 @@ In the perspective of disciple:
   webapp signaled arm    <==> webapp exists and 'arm' received
   webapp signaled record <==> webapp signaled arm and 'record' received
 
+  1) disciple sends    'exist' when it finds HD PVR
+  2) webapp   receives 'exist'
+  3) webapp   sends    'exist_verified'
+  4) disciple receives 'exist_verified'
+  5) webapp   sends    'arm'
+  6) disciple receives 'arm' and arms itself
+  7) disciple sends    'arm_verified'
+  8) webapp   receives 'arm_verified'
+  9) webapp   removes  'arm'
+ 10) webapp   sends    'record'
+ 11) disciple receives 'record' and begins recording
+ 12) disciple sends    'record_verified'
+ 13) webapp   receives 'record_verified'
+ 14) webapp   removes  'record' when want to stop recording
+ 15) webapp   removes  'exist_verified'
+ 16) disciple removes  'arm_verified'
+ 17) disciple removes  'record_verified'
+ 18) disciple removes  'exist' signal when it kills itself
+
 Main Loop:
  forever:
   1) disciple sends    'exist' when it finds HD PVR

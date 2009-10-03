@@ -322,7 +322,10 @@ def main():
             elif c == ord('d'):
                 download_file = not download_file 
             elif c == ord('m'):
-                mplayer_start = not mplayer_start
+                if mplayer_start and super_mode:
+                    mplayer_start = False
+                elif not mplayer_start:
+                    mplayer_start = True
             elif c == ord('h'):
                 display_help = not display_help
             elif c == 19:   # Ctrl + S
