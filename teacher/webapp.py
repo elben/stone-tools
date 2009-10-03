@@ -47,21 +47,30 @@ if form.has_key("arm"):
     ids = []
     for id in form.getlist("arm"):
         ids.append(id)
-    app.signal_arm(ids)
+    try:
+        app.signal_arm(ids)
+    except IDUndefinedException, e:
+        print "<p><h2>" + str(e) + "</h2></p>"
 
 # send 'record' signals
 if form.has_key("record"):
     ids = []
     for id in form.getlist("record"):
         ids.append(id)
-    app.signal_record(ids)
+    try:
+        app.signal_record(ids)
+    except IDUndefinedException, e:
+        print "<p><h2>" + str(e) + "</h2></p>"
 
 # remove 'record' signals
 if form.has_key("endrecord"):
     ids = []
     for id in form.getlist("endrecord"):
         ids.append(id)
-    app.signal_end_record(ids)
+    try:
+        app.signal_end_record(ids)
+    except IDUndefinedException, e:
+        print "<p><h2>" + str(e) + "</h2></p>"
 
 ################
 # Intro

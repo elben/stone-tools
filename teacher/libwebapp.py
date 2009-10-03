@@ -2,6 +2,13 @@
 
 import os
 
+class IDUndefinedException(Exception):
+    def __init__(self, value, id):
+        self.value = value
+        self.id = id
+    def __str__(self):
+        return str(self.value) + " " + str(self.id)
+
 class TeacherControl:
     """
     TeacherControl controls the communication between disciples and
@@ -130,8 +137,8 @@ class TeacherControl:
         signal to be sent.
         """
         if id not in self.disciples:
-            raise Exception("TeacherControl: " +
-                    "attempted to signal unknown id "+id)
+            raise IDUndefinedException("TeacherControl: " +
+                    "attempted to signal unknown id", id)
 
         i = self.disciples.index(id)
         if precond is not None and not precond(self.states[i]):
