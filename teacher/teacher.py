@@ -42,29 +42,29 @@ def main():
             print "Waiting for video files..."
         
         # find bad files
-        for file_cur in current:
-            for file_prev in previous:
+        for cur_name, cur_size in current:
+            for prev_name, prev_size in previous:
                 # if files have the same name and the size has not grown
                 # and that file is not already in bad_files
-                if ( file_cur[0] == file_prev[0] and
-                     file_cur[1] <= file_prev[1] ):
+                if ( cur_name == prev_name and
+                     cur_size <= prev_size ):
                     
                     # don't add new recordings to bad_files
-                    if file_cur[1] <= 0.5 * file_prev[1]:
+                    if cur_size <= 0.5 * prev_size:
                         # if it has shrunk drastically, it is no longer bad
-                        print ""
+                        print
                         print "New sermon found, removing from bad files"
                         
                         try:
-                            bad_files.remove(file_cur[0])
+                            bad_files.remove( cur_name )
                         except:
                             pass
                     else:
                         # add it to bad_files if it's not already there
-                        if not file_cur[0] in bad_files:
-                            bad_files.append( file_cur[0] )
+                        if not cur_name in bad_files:
+                            bad_files.append( cur_name )
                             
-                            print "Added bad file" + file_cur[0]
+                            print "Added bad file" + cur_name
                     
         if len(bad_files) == len(current) and len(current) != 0:
             print "No good files found!"
@@ -83,29 +83,38 @@ def main():
             print "Symbolic link is", "'" + str(symbolic_link) + "'"
         
 def update_symlink(link_name, cur_link, current_files, bad_files):
+    """
+    
+    """
+    # as long as the symlink is to a bad file or does not exist
     if cur_link in bad_files or cur_link == None:
-        for file in current_files:
-            if file[0] not in bad_files:
-                cur_link = file[0]
-                
+        # look through all the files and compare to the ones in bad_files
+        for file_name, file_size in current_files:
+            # set link to a file that is not bad
+            if file_name not in bad_files:
                 # remove old link if it exists
                 rm(link_name)
                 
                 # create new symlink
-                os.symlink(cur_link, link_name)
+                os.symlink(file_name, link_name)
                 
                 break
     
     return cur_link
 
 def rm(file):
-    """Remove a file or directory, as long as it exists"""
+    """
+    Remove a file or directory, as long as it exists
+    """
     if os.path.isfile(file) or os.path.islink(file):
         os.remove(file)
     elif os.path.isdir(file):
         os.rmdir(file)
 
 def get_video_files(dir, prefix):
+    """
+    Get the names and sizes of all files in the given dir that match the prefix
+    """
     video_files = []
     
     prefix = str(prefix)
