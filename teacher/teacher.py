@@ -14,6 +14,7 @@ configs = ConfigParser.ConfigParser()
 configs.read(config_file)
 
 VIDEO_DIR = configs.get("teacher", "video_dir")
+SIGNALS_DIR = configs.get("webapp", "signals_dir")
 VIDEO_PREFIX = configs.get("teacher", "video_prefix")
 
 def main():
@@ -55,21 +56,29 @@ def main():
                         
                         # remove it whether it's in bad_files or not
                         try:
-                            bad_files.remove( cur_name )
+                            bad_files.remove(cur_name)
                         except:
                             pass
                     else:
                         # add it to bad_files if it's not already there
                         if not cur_name in bad_files:
-                            bad_files.append( cur_name )
+                            bad_files.append(cur_name)
                             
                             print "Added bad file", "'" + cur_name + "'"
+                            
+                            # parse the mac address  out of cur_name
+                            mac_address = cur_name.split("_")[1]
+                            
+                            # remove the exist signal for this disciple
+                            # so webapp can keep state
+                            rm( os.path.join(SIGNALS_DIR,
+                                             "exist_" + mac_address) )
                     
         if len(bad_files) == len(current_files) and len(current_files) != 0:
             print "No good files found!"
             
         # update symlink
-        link_name = VIDEO_DIR + "sermon_symlink"
+        link_name = os.path.join(VIDEO_DIR, "sermon_symlink")
         prev_symlink = symbolic_link
         symbolic_link = update_symlink(link_name, symbolic_link, current_files,
                                        bad_files)
@@ -83,7 +92,7 @@ def main():
     
 def update_symlink(link_name, cur_link, current_files, bad_files):
     """
-    Update the current symlink to point to a knwn good file
+    Update the current symlink to point to a known good file
     """
     # return this, stays the same if cur_link is not bad
     new_link = cur_link
@@ -129,14 +138,14 @@ def get_video_files(dir, prefix):
     for file in os.listdir(dir):
         # make sure it's good, has a name with our prefix, and is not a dir
         if ( file.startswith(prefix) and not os.path.isdir(file) and
-             not os.stat(dir + file).st_size == 0):
-            video_files.append(dir + file)
+             not os.stat(os.path.join(dir, file)).st_size == 0 ):
+            video_files.append(file)
     
     # get file sizes
     for i in range( len(video_files) ):
-        # make each file into a tuple as (full file name, file bytes)
+        # make each file into a tuple as (file name, file bytes)
         video_files[i] = ( video_files[i],
-                           os.stat(video_files[i]).st_size )
+                           os.stat(os.path.join(dir, video_files[i])).st_size )
     
     return video_files
 
