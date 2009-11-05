@@ -18,8 +18,8 @@ class Downloader(object):
     in size.
     """
     def __init__(self, remote_url, remote_file,
-            local_dir="", local_file=None,
-            force_redl=True, rate_limit=-1):
+            local_dir = "", local_file = None,
+            force_redl = True, rate_limit = -1):
         """
         Creates a Downloader with a specified URL to download from.
 
@@ -50,8 +50,8 @@ class Downloader(object):
         # Request object represents file and the range we want to dl
         # TODO: header might be Request-Range. Read up on Apache stuff.
         # TODO: move this into the run() method or download()
-        self.request = urllib2.Request(self.remote(), headers={"Range",
-            "bytes=%s-" % (str(self.size_local())))
+        self.request = urllib2.Request(self.remote(), headers = {"Range" :
+            "bytes=%s-" % (str(self.size_local())) } )
 
         self.rate_limit = rate_limit        # -1 = do not cap rate
         self.rate = 0                       # current rate TODO: prob !need
@@ -84,23 +84,30 @@ class Downloader(object):
                 response = urllib2.urlopen(self.remote())
                 info = response.info() # dict of http headers, HTTPMessage
                 self._remote_size = int(info["content-length"])
-            except:
-                pass
+            except Exception, e:
+                # print out whatever Exception object we caught, so we
+                # at least know what it was
+                print e
             
     def progress(self):
-        """Returns percentage (0 to 1) done."""
-        if self._remote_size == 0: return 0
-        return self.size_local() / self.remote_size()
+        """Returns percentage (0.0 to 1.0) done."""
+        if self._remote_size == 0:
+            return 0.0
+        return float( self.size_local() ) / self.remote_size()
 
     def size_local(self):
         return os.path.getsize(self.local())
+    
     def size_remote(self):
         self._update()
         return self._remote_size
+    
     def local(self):
         return os.path.join(self._local_dir, self._local_file)
+    
     def remote(self):
         return os.path.join(self._remote_url, self._remote_file)
+    
 
 class DownloaderThread(threading.Thread):
     """NOTE: we can only overwrite __init__() and run()."""
