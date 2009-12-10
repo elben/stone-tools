@@ -3,9 +3,6 @@ import threading
 import os
 import time
 
-# global download rate variable in bytes/second, updated by a thread
-global_download_rate = 0.0
-
 def enough_delay(prev_time, min_gap):
     """Returns True if enough time has passed since prev_time."""
     
@@ -21,7 +18,7 @@ class Downloader(object):
     """
     
     def __init__(self, remote_url, remote_file,
-            local_dir = "", local_file = None,
+            local_directory = "", local_file = None,
             force_redownload = False, rate_limit = -1):
         """
         Creates a Downloader with a specified URL to download from.
@@ -31,14 +28,14 @@ class Downloader(object):
         remote_file: file to download
         local_dir: directory to save file to
         local_file: name file will be saved as
-        force_redownload: force reset a download; will not continue
+        force_redownload: force to reset a download; will not continue
           previous download
         rate_limit: limit download at this rate
         """
         
         self._remote_url = remote_url
         self._remote_file = remote_file
-        self._local_dir = local_dir
+        self._local_directory= local_directory
         
         # use same file name if user did not specify local_file name
         self._local_file = remote_file if not local_file else local_file
@@ -56,15 +53,15 @@ class Downloader(object):
         # Request object represents file and the range we want to dl
         # TODO: header might be Request-Range. Read up on Apache stuff.
         # TODO: move this into the run() method or download()
-        self.request = urllib2.Request(self.remote(), headers = {"Range" :
-            "bytes=%s-" % (str(self.get_local_size())) } )
+        headers = { "Range" : "bytes=%s-" % (str(self.get_local_size())) }
+        self.request = urllib2.Request(self.remote(), headers = headers)
         
-        # rate to limit our download to, -1 == do not cap rate
+        # rate to limit our download to, -1 means 'do not cap rate'
         self.rate_limit = rate_limit
         
         self._update()
         self.__prev_time_update = time.time()
-        self.__update_time_gap = 5 # seconds
+        self.__update_time_gap = 5.0 # seconds
     
     def run(self):
         pass
@@ -87,23 +84,16 @@ class Downloader(object):
                 response = urllib2.urlopen(self.remote())
                 info = response.info() # dict of http headers, HTTPMessage
                 self._remote_size = int( info["content-length"] )
-            except Exception, e:
+            except Exception, e: # TODO: deal with the actual exceptions
                 # raise whatever Exception object we caught, so we
                 # know how to deal with it in the future
-                print "From '_update()' in Downloader:"
+                print "Exception thrown from _update() in", self.__name__
                 raise e
             
-    def get_download_rate(self):
-        """Returns the current download rate in KB/s"""
-        
-        # makes sure that we are getting the global variable
-        global global_download_rate
-        
-        return global_download_rate
-    
     def get_progress(self):
         """Returns percentage (0.0 to 1.0) done."""
         
+        # this check prevents _update() from being called excessively
         if self._local_size < self._remote_size:
             return float(self.get_local_size()) / self.get_remote_size()
         else:
@@ -112,12 +102,13 @@ class Downloader(object):
     def get_local_size(self):
         """Return the size of the locally downloaded file."""
         
-        # return the size if possible, else return 0
+        # return the size if possible, else return -1
         try:
             return os.path.getsize(self.get_local_path())
         except OSError, e:
+            print "Error thrown from get_local_size() in", self.__name__
             print e
-            return 0
+            return -1
     
     def get_remote_size(self):
         """Return the size of the remote file."""
@@ -135,8 +126,8 @@ class Downloader(object):
         
         return os.path.join(self._remote_url, self._remote_file)
     
-class DownloadRateThread(threading.Thread):
-    """Continuously calculate the download rate for accurate reporting."""
+class DownloaderThread(threading.Thread):
+    """Dowloads a given file"""
     
     def __init__(self, file, calc_interval = 0.5, time_interval = 2):
         """
@@ -150,24 +141,21 @@ class DownloadRateThread(threading.Thread):
         
         self._file = file
         self._calc_interval = calc_interval
+        self._download_rate = 0.0
         
-        # length of the queue of file sizes, must be at least 1
+        # length of the queue of file sizes, must be at least 1 to prevent
+        # divde-by-zero errors in rate calculation
         self._num_calcs = max(1, int(time_interval / calc_interval))
     
+        # we need to call Thread's init method by convention
+        threading.Thread.__init__(self)
+        
     def run(self):
         """Continuously calculate the download rate over an interval."""
         
-        # the global download rate storage variable, used to communicate to
-        # other objects the results of our calculations
-        global global_download_rate
-
         # the list of previously calculated rates, used for calculating
-        # average rate. fill with 0s so we can just append/pop as needed
-        rate_list = [0] * self._num_calcs
-
-        # creates a Lock() object, used to keep from breaking variable access
-        # while using threading
-        lock = threading.Lock()
+        # average rate. fill with 0s so we can just queue/dequeue as needed
+        rate_list = [0.0] * self._num_calcs
         
         # the last file size we got, used to calculate change in file size
         prev_file_size = self.get_file_size()
@@ -182,27 +170,25 @@ class DownloadRateThread(threading.Thread):
             rate_list.pop(0) # pop from the front, ie. dequeue
             
             # change the global rate to the average rate over our interval
-            # and do it while locked, to boot
-            with lock:
-                global_download_rate = self.average(rate_list)
+            self._download_rate = self._average_list(rate_list)
             
             # wait a bit for the next calculation
+            # TODO: needs to change on implementing actual downloading
             time.sleep(self._calc_interval)
         
-    def average(self, list):
-        """Return the avarage of a list of numbers."""
+    def _average_list(self, list):
+        """Return the average of a list of numbers."""
         
-        return float(reduce(lambda x, y: x + y, list)) / len(list)
+        return float( reduce(lambda x, y: x + y, list) ) / len(list)
     
     def get_file_size(self):
-        """Attempt to get the file size of the given file, else return 0."""
+        """Attempt to get the file size of the given file, else return -1."""
+        
         try:
             return os.path.getsize(self._file)
         except OSError, ose: # file not found
+            print "Error throw from get_file_size() in", self.__name__
             print ose
-            print "File not found: '" + str(self._file) + "'"
-            return 0
-
-class DownloaderThread(threading.Thread):
-    """NOTE: we can only overwrite __init__() and run()."""
-    
+            print "File not found:", "'" + str(self._file) + "'"
+            
+            return -1
