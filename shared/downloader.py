@@ -44,9 +44,9 @@ class Downloader(object):
         
         # Request object represents file and the range we want to dl
         # http://en.wikipedia.org/wiki/List_of_HTTP_headers
-        headers = { "Range" : "bytes=%s-" % (str(self.local_size())) }
-        self.request = urllib2.Request(self.remote(), headers = headers)
-        
+        self.request = urllib2.Request(self.remote_url())
+        self.request.add_header("Range", "bytes=%s-" % (str(self.local_size())))
+
         self.rate_limit = rate_limit        # -1 means 'do not cap rate'
         
         self.__prev_time_update = time.time()
@@ -54,6 +54,13 @@ class Downloader(object):
         self._update()
     
     def run(self):
+        # sample code to download:
+        # response = urllib2.urlopen(self.request)
+        # response.read(100)
+
+        # TODO: maybe we want one self.response object, since it is used by
+        # Downloader.run and Downloader._update. This way, we have a
+        # universal urllib2.urlopen call for both _update and run.
         pass
     
     def _update(self):
@@ -121,7 +128,7 @@ class DownloaderThread(threading.Thread):
     
     def __init__(self, file, calc_interval = 0.5, time_interval = 2):
         """
-        Initialize the thread with several values.
+        Initialize the thread.
         
         file: path to file we'll watch for size changes
         calc_interval: frequency of calculations, in seconds.
