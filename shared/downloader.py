@@ -19,7 +19,7 @@ class Downloader(object):
     
     def __init__(self, remote_url, remote_file,
             local_directory = "", local_file = None,
-            force_redownload = False, rate_limit = -1):
+            reset_download = False, rate_limit = -1):
         """
         Creates a Downloader with a specified URL to download from.
         
@@ -28,7 +28,7 @@ class Downloader(object):
         remote_file: file to download
         local_dir: directory to save file to
         local_file: name file will be saved as
-        force_redownload: force to reset a download; will not continue
+        reset_download: force to reset a download; will not continue
           previous download
         rate_limit: limit download at this rate
         """
@@ -37,31 +37,23 @@ class Downloader(object):
         self._remote_file = remote_file
         self._local_directory= local_directory
         
-        # use same file name if user did not specify local_file name
+        # defaults to using same file name as remote file
         self._local_file = remote_file if not local_file else local_file
-        
-        # if file already exists, get size and start download there
-        if os.path.exists(self.get_local_path()) and not force_redownload:
-            # TODO: don't need to save _local_size here since we can call
-            # get_local_size() later when we need it
-            self._local_size = os.path.getsize( self.get_local_path() )
-        else:
-            self._local_size = 0
         
         self._remote_size = 0
         
         # Request object represents file and the range we want to dl
         # TODO: header might be Request-Range. Read up on Apache stuff.
-        # TODO: move this into the run() method or download()
+        # TODO: move this into run() or download()
         headers = { "Range" : "bytes=%s-" % (str(self.get_local_size())) }
         self.request = urllib2.Request(self.remote(), headers = headers)
         
-        # rate to limit our download to, -1 means 'do not cap rate'
+        # rate to limit our download to; -1 means 'do not cap rate'
         self.rate_limit = rate_limit
         
-        self._update()
         self.__prev_time_update = time.time()
         self.__update_time_gap = 5.0 # seconds
+        self._update()
     
     def run(self):
         pass
@@ -70,23 +62,22 @@ class Downloader(object):
         """Connect to the remote URL and update remote file info."""
         
         # TODO: implement time checking thing we do in gently.py's WGet
-        # TODO: catch exceptions
-        # apparently it could throw:
-        #   urllib2.HTTPError - most likely, couldn't connect
-        #   urllib2.URLError - if we use improper protocol "httpdfsk://..."
-        #   httplib.BadStatusLine
-        #   httplib.InvalidURL
-        #   ValueError
-        #   IOError
         if enough_delay(self.__prev_time_update, self.__update_time_gap):
             self.__prev_time_update = time.time()
             try:
                 response = urllib2.urlopen(self.remote())
                 info = response.info() # dict of http headers, HTTPMessage
                 self._remote_size = int( info["content-length"] )
-            except Exception, e: # TODO: deal with the actual exceptions
+            except Exception, e:
                 # raise whatever Exception object we caught, so we
                 # know how to deal with it in the future
+                # Possible (not complete) list of exceptions:
+                #   urllib2.HTTPError - most likely, couldn't connect
+                #   urllib2.URLError - if we use improper protocol "httpdfsk://..."
+                #   httplib.BadStatusLine
+                #   httplib.InvalidURL
+                #   ValueError
+                #   IOError
                 print "Exception thrown from _update() in", self.__name__
                 raise e
             
@@ -94,7 +85,7 @@ class Downloader(object):
         """Returns percentage (0.0 to 1.0) done."""
         
         # this check prevents _update() from being called excessively
-        if self._local_size < self._remote_size:
+        if self.get_local_size() < self._remote_size:
             return float(self.get_local_size()) / self.get_remote_size()
         else:
             return 1.0
