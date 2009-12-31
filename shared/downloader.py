@@ -169,7 +169,7 @@ class DownloaderThread(threading.Thread):
     def _average_list(self, list):
         """Return the average of a list of numbers."""
         
-        return float( reduce(lambda x, y: x + y, list) ) / len(list)
+        return float(sum(list)) / len(list)
     
     def file_size(self):
         """Attempt to get the file size of the given file, else return -1."""
