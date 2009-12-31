@@ -83,11 +83,10 @@ class Downloader(object):
             
     def get_progress(self):
         """Returns percentage (0.0 to 1.0) done."""
-        
-        # this check prevents _update() from being called excessively
-        if self.get_local_size() < self._remote_size:
+        remote_size = self.get_remote_size()
+        if remote_size > 0:
             return float(self.get_local_size()) / self.get_remote_size()
-        else:
+        else
             return 1.0
     
     def get_local_size(self):
