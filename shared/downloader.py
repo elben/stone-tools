@@ -43,13 +43,11 @@ class Downloader(object):
         self._remote_size = 0
         
         # Request object represents file and the range we want to dl
-        # TODO: header might be Request-Range. Read up on Apache stuff.
-        # TODO: move this into run() or download()
-        headers = { "Range" : "bytes=%s-" % (str(self.get_local_size())) }
+        # http://en.wikipedia.org/wiki/List_of_HTTP_headers
+        headers = { "Range" : "bytes=%s-" % (str(self.local_size())) }
         self.request = urllib2.Request(self.remote(), headers = headers)
         
-        # rate to limit our download to; -1 means 'do not cap rate'
-        self.rate_limit = rate_limit
+        self.rate_limit = rate_limit        # -1 means 'do not cap rate'
         
         self.__prev_time_update = time.time()
         self.__update_time_gap = 5.0 # seconds
@@ -81,43 +79,45 @@ class Downloader(object):
                 print "Exception thrown from _update() in", self.__name__
                 raise e
             
-    def get_progress(self):
+    def progress(self):
         """Returns percentage (0.0 to 1.0) done."""
-        remote_size = self.get_remote_size()
+        remote_size = self.remote_size()
         if remote_size > 0:
-            return float(self.get_local_size()) / self.get_remote_size()
+            return float(self.local_size()) / self.remote_size()
         else
             return 1.0
     
-    def get_local_size(self):
-        """Return the size of the locally downloaded file."""
+    def local_size(self):
+        """
+        Return the size of the locally downloaded file.
+        Returns -1 if size check failed.
+        """
         
-        # return the size if possible, else return -1
         try:
-            return os.path.getsize(self.get_local_path())
+            return os.path.getsize(self.local_path())
         except OSError, e:
-            print "Error thrown from get_local_size() in", self.__name__
+            print "Error thrown from local_size() in", self.__name__
             print e
             return -1
     
-    def get_remote_size(self):
+    def remote_size(self):
         """Return the size of the remote file."""
         
         self._update()
         return self._remote_size
     
-    def get_local_path(self):
+    def local_path(self):
         """Returns the local file path including file name."""
         
         return os.path.join(self._local_dir, self._local_file)
     
-    def get_remote_url(self):
+    def remote_url(self):
         """Returns the remote URL including file name."""
         
         return os.path.join(self._remote_url, self._remote_file)
     
 class DownloaderThread(threading.Thread):
-    """Dowloads a given file"""
+    """Downloads a given file"""
     
     def __init__(self, file, calc_interval = 0.5, time_interval = 2):
         """
@@ -148,10 +148,10 @@ class DownloaderThread(threading.Thread):
         rate_list = [0.0] * self._num_calcs
         
         # the last file size we got, used to calculate change in file size
-        prev_file_size = self.get_file_size()
+        prev_file_size = self.file_size()
         while True:
             # queue a new rate into the list and dequeue the oldest one
-            file_size = self.get_file_size()
+            file_size = self.file_size()
             bytes_per_second = ( (file_size - prev_file_size) /
                                  float(self._calc_interval) )
             prev_file_size = file_size
@@ -171,13 +171,13 @@ class DownloaderThread(threading.Thread):
         
         return float( reduce(lambda x, y: x + y, list) ) / len(list)
     
-    def get_file_size(self):
+    def file_size(self):
         """Attempt to get the file size of the given file, else return -1."""
         
         try:
             return os.path.getsize(self._file)
         except OSError, ose: # file not found
-            print "Error throw from get_file_size() in", self.__name__
+            print "Error throw from file_size() in", self.__name__
             print ose
             print "File not found:", "'" + str(self._file) + "'"
             
