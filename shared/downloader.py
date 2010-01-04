@@ -32,24 +32,21 @@ class Downloader(object):
           previous download
         rate_limit: limit download at this rate
 
-        TODO: implement reset_download
         """
         
+        # TODO: implement reset_download
+        # TODO: implement rate_limit
+
         self._remote_url = remote_url
         self._remote_file = os.path.basename(self._remote_url)
         self._local_directory= local_directory
         
         # defaults to using same file name as remote file
-        self._local_file = remote_file if not local_file else local_file
+        self._local_file = self._remote_file if not local_file else local_file
         
         self._remote_size = 0
-        
-        # Request object represents file and the range we want to dl
-        # http://en.wikipedia.org/wiki/List_of_HTTP_headers
-        self.request = urllib2.Request(self.remote_url())
-        self.request.add_header("Range", "bytes=%s-" % (str(self.local_size())))
 
-        self.rate_limit = rate_limit        # -1 means 'do not cap rate'
+        self._rate_limit = rate_limit        # -1 means 'do not cap rate'
         
         self.__prev_time_update = time.time()
         self.__update_time_gap = 5.0 # seconds
@@ -62,6 +59,12 @@ class Downloader(object):
         self.__update()
         return self.__response_obj
 
+    def __request(self):
+        # http://en.wikipedia.org/wiki/List_of_HTTP_headers
+        request = urllib2.Request(self.remote_url())
+        request.add_header("Range", "bytes=%s-" % (str(self.local_size())))
+        return request
+
     def __update(self):
         """
         Connect to the remote URL, get a new response object, and update
@@ -71,7 +74,7 @@ class Downloader(object):
         if enough_delay(self.__prev_time_update, self.__update_time_gap):
             self.__prev_time_update = time.time()
             try:
-                self.__response_obj = urllib2.urlopen(self.remote())
+                self.__response_obj = urllib2.urlopen(self.__request())
                 info = self.__response_obj.info() # dict of http headers, HTTPMessage
                 self._remote_size = int( info["content-length"] )
             except Exception, e:
