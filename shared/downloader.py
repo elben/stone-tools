@@ -19,24 +19,24 @@ class Downloader(object):
     Use Downloader through DownloaderThread.
     """
     
-    def __init__(self, remote_url, remote_file,
+    def __init__(self, remote_url,
             local_directory = "", local_file = None,
             reset_download = False, rate_limit = -1):
         """
         Creates a Downloader with a specified URL to download from.
         
-        remote_url: URL (including directory, excluding file name)
-          of file
-        remote_file: file to download
+        remote_url: URL of file
         local_dir: directory to save file to
         local_file: name file will be saved as
         reset_download: force to reset a download; will not continue
           previous download
         rate_limit: limit download at this rate
+
+        TODO: implement reset_download
         """
         
         self._remote_url = remote_url
-        self._remote_file = remote_file
+        self._remote_file = os.path.basename(self._remote_url)
         self._local_directory= local_directory
         
         # defaults to using same file name as remote file
@@ -68,7 +68,6 @@ class Downloader(object):
         remote file info.
         """
         
-        # TODO: implement time checking thing we do in gently.py's WGet
         if enough_delay(self.__prev_time_update, self.__update_time_gap):
             self.__prev_time_update = time.time()
             try:
@@ -127,7 +126,7 @@ class Downloader(object):
     def remote_url(self):
         """Returns the remote URL including file name."""
         
-        return os.path.join(self._remote_url, self._remote_file)
+        return self._remote_url
     
 class DownloaderThread(threading.Thread):
     """
@@ -138,19 +137,24 @@ class DownloaderThread(threading.Thread):
     downloaded to grow in size.
     """
     
-    def __init__(self, file, calc_interval = 0.5, time_interval = 2):
+    def __init__(self, file_url, calc_interval = 0.5, time_interval = 2,
+            reset = False, paused = True):
         """
         Initialize the thread.
         
-        file: path to file we'll watch for size changes
+        file_url: url to file we want to download
         calc_interval: frequency of calculations, in seconds.
         time_interval: the period over which we should calculate the rate,
           also in seconds.
         """
-        
+
+        self.dler = Downloader()
         self._file = file
         self._calc_interval = calc_interval
         self._download_rate = 0.0
+
+        self._reset = reset     # if True, ignore existing downloaded file
+        self._paused = pause
         
         # length of the queue of file sizes, must be at least 1 to prevent
         # divde-by-zero errors in rate calculation
@@ -158,10 +162,10 @@ class DownloaderThread(threading.Thread):
     
         # we need to call Thread's init method by convention
         threading.Thread.__init__(self)
+
+
         
     def run(self):
-        """Continuously calculate the download rate over an interval."""
-        
         # the list of previously calculated rates, used for calculating
         # average rate. fill with 0s so we can just queue/dequeue as needed
         rate_list = [0.0] * self._num_calcs
