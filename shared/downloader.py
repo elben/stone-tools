@@ -20,7 +20,7 @@ class Downloader(object):
     """
     
     def __init__(self, remote_url,
-            local_directory = "", local_file = None,
+            local_dir = "", local_file = None,
             reset_download = False, rate_limit = -1):
         """
         Creates a Downloader with a specified URL to download from.
@@ -39,10 +39,10 @@ class Downloader(object):
 
         self._remote_url = remote_url
         self._remote_file = os.path.basename(self._remote_url)
-        self._local_directory= local_directory
+        self._local_dir = local_dir
         
         # defaults to using same file name as remote file
-        self._local_file = self._remote_file if not local_file else local_file
+        self._local_file_name = self._remote_file if not local_file else local_file
         
         self._remote_size = 0
 
@@ -53,7 +53,19 @@ class Downloader(object):
         self.__update()
     
     def download_chunk(self, chunk_size=100):
-        self.__response().read(chunk_size)
+        chunk = self.__response().read(chunk_size)
+        if not chunk:
+            return
+
+        # TODO: we need reset_download logic here, but don't implement
+        # until we know how reset_download flag will work
+        if self.local_size() == 0:
+            flags = "wb"    # overwrite binary
+        else:
+            flags = "ab"    # append binary
+
+        with f as open(self.local_path(), flags):
+            f.write(chunk)
     
     def __response(self):
         self.__update()
@@ -124,7 +136,7 @@ class Downloader(object):
     def local_path(self):
         """Returns the local file path including file name."""
         
-        return os.path.join(self._local_dir, self._local_file)
+        return os.path.join(self._local_dir, self._local_file_name)
     
     def remote_url(self):
         """Returns the remote URL including file name."""
