@@ -15,6 +15,8 @@ class Downloader(object):
     Similar to GNU wget, Downloader continues a download if the file already
     exists locally. Downloader also allows the file being downloaded to grow
     in size.
+
+    Use Downloader through DownloaderThread.
     """
     
     def __init__(self, remote_url, remote_file,
@@ -51,27 +53,27 @@ class Downloader(object):
         
         self.__prev_time_update = time.time()
         self.__update_time_gap = 5.0 # seconds
-        self._update()
+        self.__update()
     
-    def run(self):
-        # sample code to download:
-        # response = urllib2.urlopen(self.request)
-        # response.read(100)
+    def download_chunk(self, chunk_size=100):
+        self.__response().read(chunk_size)
+    
+    def __response(self):
+        self.__update()
+        return self.__response_obj
 
-        # TODO: maybe we want one self.response object, since it is used by
-        # Downloader.run and Downloader._update. This way, we have a
-        # universal urllib2.urlopen call for both _update and run.
-        pass
-    
-    def _update(self):
-        """Connect to the remote URL and update remote file info."""
+    def __update(self):
+        """
+        Connect to the remote URL, get a new response object, and update
+        remote file info.
+        """
         
         # TODO: implement time checking thing we do in gently.py's WGet
         if enough_delay(self.__prev_time_update, self.__update_time_gap):
             self.__prev_time_update = time.time()
             try:
-                response = urllib2.urlopen(self.remote())
-                info = response.info() # dict of http headers, HTTPMessage
+                self.__response_obj = urllib2.urlopen(self.remote())
+                info = self.__response_obj.info() # dict of http headers, HTTPMessage
                 self._remote_size = int( info["content-length"] )
             except Exception, e:
                 # raise whatever Exception object we caught, so we
@@ -110,7 +112,7 @@ class Downloader(object):
     def remote_size(self):
         """Return the size of the remote file."""
         
-        self._update()
+        self.__update()
         return self._remote_size
     
     def local_path(self):
@@ -124,7 +126,13 @@ class Downloader(object):
         return os.path.join(self._remote_url, self._remote_file)
     
 class DownloaderThread(threading.Thread):
-    """Downloads a given file"""
+    """
+    Downloads a file from a URL to a local directory.
+    
+    Similar to GNU wget, DownloaderThread continues a download if the file
+    already exists locally. DownloaderThread also allows the file being
+    downloaded to grow in size.
+    """
     
     def __init__(self, file, calc_interval = 0.5, time_interval = 2):
         """
