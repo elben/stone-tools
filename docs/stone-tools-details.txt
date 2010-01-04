@@ -1,0 +1,46 @@
+#summary Overview of the Stone Tools architecture.
+
+= Overview =
+
+Stone Tools transfer video feed from a *parent* location to multiple *children* locations. This transfer can be broken down into four stages. Each stage has its own machines. Each set of machines is given a name.
+
+*Disciples* grab and save live video feed from cameras. The *Teacher* appoints one disciple as the current valid video feed. *Paul*, a web server, grabs the video feed from Teacher. Finally, *gentiles* download the video feed from *Paul* and display the video on the screen.
+
+== Stage 1: Disciples ==
+
+The disciples, dispatched in the parent location, each have a Hauppauge HD PVR attached, which converts incoming video to the H264 format.  Disciples' role is fulfilled thusly:
+{{{
+mount NFS share
+attach HD PVR
+wait for signal (from Teacher) to arm
+wait for signal (from Teacher) to record
+while not signaled to stop:
+    record
+}}}
+
+*Why multiple disciples?*
+Happauge HD PVRs are known to overheat, especially earlier models. This stage is critical (it's capturing the live feed). Thus, redundancy is desired. Because Happauge HD PVRs and the disciple machines are relatively cheap, dispatching more than one disciple is reasonable.
+
+*How many disciples?*
+We are currently running with three disciples.
+
+See DiscipleDetails for an in-depth discussion.
+
+== Stage 2: Teacher ==
+
+Teacher, located in the parent location, is attached to the disciples. The purpose of Teacher is to select a good video feed for Paul to grab. The good video feed is selected via a human.
+
+See TeacherDetails for an in-depth discussion.
+
+== Stage 3: Paul ==
+
+Paul is a web server located somewhere in the blissful sky that is the internet. Paul's purpose is to download Teacher's video file.
+
+See PaulDetails for an in-depth discussion.
+
+== Stage 4: Gentiles ==
+
+A gentile is dispatched in every children location. The purpose of a gentile is to download the video file from Paul and to play it back. Playback is accomplished via MPlayer, an open source media player.
+
+See GentileDetail for an in-depth discussion.
+
