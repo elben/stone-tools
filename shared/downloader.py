@@ -88,6 +88,10 @@ class Downloader(object):
                 print "Exception thrown from _update() in", self.__name__
                 raise e
             
+    def finished(self):
+        """Returns True if download is finished."""
+        return self.remote_size() == self.local_size()
+
     def progress(self):
         """Returns percentage (0.0 to 1.0) done."""
         remote_size = self.remote_size()
