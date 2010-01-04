@@ -64,7 +64,7 @@ class Downloader(object):
         else:
             flags = "ab"    # append binary
 
-        with f as open(self.local_path(), flags):
+        with open(self.local_path(), flags) as f:
             f.write(chunk)
     
     def __response(self):
@@ -111,7 +111,7 @@ class Downloader(object):
         remote_size = self.remote_size()
         if remote_size > 0:
             return float(self.local_size()) / self.remote_size()
-        else
+        else:
             return 1.0
     
     def local_size(self):
