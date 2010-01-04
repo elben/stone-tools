@@ -8,6 +8,17 @@ def enough_delay(prev_time, min_gap):
     
     return time.time() - prev_time >= min_gap
 
+class DownloaderException(Exception):
+    def __init__(self, msg, remote_file_sz=None, local_file_sz=None):
+        self.message = msg
+        self.remote_file_sz = remote_file_sz
+        self.local_file_sz = local_file_sz
+    def __str__(self):
+        s = self.message
+        s += "\nLocal size: " + str(self.local_file_sz)
+        s += "\nRemote size: " + str(self.remote_file_sz)
+        return s
+
 class Downloader(object):
     """
     Downloads a file from a URL to a local directory.
@@ -62,7 +73,8 @@ class Downloader(object):
             raise e
 
         if not chunk:
-            raise Exception("no chunk downloaded!")
+            raise DownloaderException("Failed to download chunk of " str(chunk_size)
+                    + " bytes.", self.remote_size(), self.local_size())
             return
 
         # TODO: we need reset_download logic here, but don't implement
