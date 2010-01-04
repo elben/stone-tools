@@ -45,16 +45,22 @@ class Downloader(object):
         self._local_file_name = self._remote_file if not local_file else local_file
         
         self._remote_size = 0
-
         self._rate_limit = rate_limit        # -1 means 'do not cap rate'
         
-        self.__prev_time_update = time.time()
         self.__update_time_gap = 5.0 # seconds
-        self.__update()
+        self.__prev_time_update = -self.__update_time_gap
+
+        self.__response_obj = None
+        #self.__update()
+
+        if not os.path.exists(self.local_path()):
+            open(self.local_path(), 'w').close() 
     
     def download_chunk(self, chunk_size=100):
+        if self.__response() is None: return
         chunk = self.__response().read(chunk_size)
         if not chunk:
+            raise Exception("no chunk gotten!")
             return
 
         # TODO: we need reset_download logic here, but don't implement
@@ -85,11 +91,11 @@ class Downloader(object):
         
         if enough_delay(self.__prev_time_update, self.__update_time_gap):
             self.__prev_time_update = time.time()
-            try:
-                self.__response_obj = urllib2.urlopen(self.__request())
-                info = self.__response_obj.info() # dict of http headers, HTTPMessage
-                self._remote_size = int( info["content-length"] )
-            except Exception, e:
+            #try:
+            self.__response_obj = urllib2.urlopen(self.__request())
+            info = self.__response_obj.info() # dict of http headers, HTTPMessage
+            self._remote_size = int( info["content-length"] )
+            #except Exception, e:
                 # raise whatever Exception object we caught, so we
                 # know how to deal with it in the future
                 # Possible (not complete) list of exceptions:
@@ -99,8 +105,8 @@ class Downloader(object):
                 #   httplib.InvalidURL
                 #   ValueError
                 #   IOError
-                print "Exception thrown from _update() in", self.__name__
-                raise e
+                # print "Exception thrown from __update()" #in ", self.__name__
+            #    raise e
             
     def finished(self):
         """Returns True if download is finished."""
@@ -123,7 +129,7 @@ class Downloader(object):
         try:
             return os.path.getsize(self.local_path())
         except OSError, e:
-            print "Error thrown from local_size() in", self.__name__
+            #print "Error thrown from local_size() in", self.__name__
             print e
             return -1
     
@@ -215,7 +221,7 @@ class DownloaderThread(threading.Thread):
         try:
             return os.path.getsize(self._file)
         except OSError, ose: # file not found
-            print "Error throw from file_size() in", self.__name__
+            #print "Error throw from file_size() in", self.__name__
             print ose
             print "File not found:", "'" + str(self._file) + "'"
             
