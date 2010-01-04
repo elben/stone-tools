@@ -52,19 +52,22 @@ class Downloader(object):
 
         self.__response_obj = None
         #self.__update()
-
-        if not os.path.exists(self.local_path()):
-            open(self.local_path(), 'w').close() 
     
     def download_chunk(self, chunk_size=100):
         if self.__response() is None: return
-        chunk = self.__response().read(chunk_size)
+        try:
+            chunk = self.__response().read(chunk_size)
+        except Exception, e:
+            print "failed to read chunk"
+            raise e
+
         if not chunk:
-            raise Exception("no chunk gotten!")
+            raise Exception("no chunk downloaded!")
             return
 
         # TODO: we need reset_download logic here, but don't implement
         # until we know how reset_download flag will work
+        self.touch_local_file()
         if self.local_size() == 0:
             flags = "wb"    # overwrite binary
         else:
@@ -72,7 +75,7 @@ class Downloader(object):
 
         with open(self.local_path(), flags) as f:
             f.write(chunk)
-    
+ 
     def __response(self):
         self.__update()
         return self.__response_obj
@@ -127,6 +130,7 @@ class Downloader(object):
         """
         
         try:
+            self.touch_local_file()
             return os.path.getsize(self.local_path())
         except OSError, e:
             #print "Error thrown from local_size() in", self.__name__
@@ -149,6 +153,15 @@ class Downloader(object):
         
         return self._remote_url
     
+    def touch_local_file(self):
+        if self.local_file_exists():
+            open(self.local_path(), 'a').close() 
+        else:
+            open(self.local_path(), 'w').close()
+
+    def local_file_exists(self):
+        return os.path.exists(self.local_path())
+
 class DownloaderThread(threading.Thread):
     """
     Downloads a file from a URL to a local directory.
