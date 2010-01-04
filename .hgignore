@@ -1,0 +1,14 @@
+syntax: glob
+*.pyc
+*.orig
+*.ts
+*.log*
+.DS_Store
+tags
+dhyana.pl
+mplayer_stderr
+mplayer_stdout
+config.conf
+stone_tools_disciples.psd
+tc_title.png
+tests/downloader.py
