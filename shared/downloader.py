@@ -8,46 +8,27 @@ def enough_delay(prev_time, min_gap):
     
     return time.time() - prev_time >= min_gap
 
-class RemoteFileException(Exception):
-    def __init__(self, msg, remote_file_sz=None, local_file_sz=None):
-        self.message = msg
-        self.remote_file_sz = remote_file_sz
-        self.local_file_sz = local_file_sz
-    def __str__(self):
-        s = self.message
-        s += "\nLocal size: " + str(self.local_file_sz)
-        s += "\nRemote size: " + str(self.remote_file_sz)
-        return s
+class FileSizesEqualException(Exception):
+    pass
 
 class RemoteFile(object):
     """
-    Downloads a file from a URL to a local directory.
+    Creates a connection with a remote file via HTTP. RemoteFile reads data
+    from a remote location. Ignores already-read data. Works with
+    increasing remote file sizes.
     
-    Similar to GNU wget, RemoteFile continues a download if the file already
-    exists locally. RemoteFile also allows the file being downloaded to grow
-    in size.
-
     Use RemoteFile through Downloader.
     """
     
-    def __init__(self, remote_url,
-            local_dir = "", local_file = None,
-            overwrite = False, rate_limit = -1):
+    def __init__(self, remote_url, local_dir = "", local_file = None):
         """
         Creates a RemoteFile with a specified URL to download from.
         
         remote_url: URL of file
         local_dir: directory to save file to
         local_file: name file will be saved as
-        overwrite: force to reset a download; will not continue
-          previous download
-        rate_limit: limit download at this rate
-
         """
         
-        # TODO: implement overwrite
-        # TODO: implement rate_limit
-
         self._remote_url = remote_url
         self._remote_file = os.path.basename(self._remote_url)
         self._local_dir = local_dir
@@ -56,15 +37,11 @@ class RemoteFile(object):
         self._local_file_name = self._remote_file if not local_file else local_file
         
         self._remote_size = 0
-        self._rate_limit = rate_limit        # -1 means 'do not cap rate'
         
         self.__update_time_gap = 5.0 # seconds
         self.__prev_time_update = -self.__update_time_gap
 
-        self.__connected_once = False
-
         self.__response_obj = None
-        #self.__update()
     
     def read(self, chunk_size=128):
         """
@@ -75,29 +52,11 @@ class RemoteFile(object):
         try:
             if self.__response() is None:
                 return None
-        except urllib2.HTTPError, e:
-            print self.get_local_size()
-            print self.get_remote_size()
-            if str(e).count('416') > 0:
-                # invalid range request caused by "finished" download
-                return None
-            else:
-                raise e
+        except FileSizesEqualException, e:
+            return None
 
-        try:
-            chunk = self.__response().read(chunk_size)
-        except Exception, e:
-            print "failed to read chunk"
-            raise e
+        return self.__response().read(chunk_size)
 
-        if not chunk:
-            raise RemoteFileException("Failed to download chunk of " + str(chunk_size)
-                    + " bytes.", self.get_remote_size(), self.get_local_size())
-
-        return chunk
-
-        # TODO: we need overwrite logic somewhere, but don't implement
-        # until we know how overwrite flag will work
         """
         self.touch_local_file()
         if self.get_local_size() == 0:
@@ -129,8 +88,15 @@ class RemoteFile(object):
         
         if enough_delay(self.__prev_time_update, self.__update_time_gap):
             self.__prev_time_update = time.time()
-            #try:
-            self.__response_obj = urllib2.urlopen(self.__request())
+            try:
+                self.__response_obj = urllib2.urlopen(self.__request())
+            except urllib2.HTTPError, e:
+                if str(e).count('416') > 0:
+                    # invalid range request caused by "finished" download
+                    raise FileSizesEqualException("Local size == remote size")
+                else:
+                    raise e
+
             info = self.__response_obj.info() # dict of http headers, HTTPMessage
 
             # headers contains full size of remote file; pulled out here
