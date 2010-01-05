@@ -32,20 +32,20 @@ class Downloader(object):
     
     def __init__(self, remote_url,
             local_dir = "", local_file = None,
-            reset_download = False, rate_limit = -1):
+            overwrite = False, rate_limit = -1):
         """
         Creates a Downloader with a specified URL to download from.
         
         remote_url: URL of file
         local_dir: directory to save file to
         local_file: name file will be saved as
-        reset_download: force to reset a download; will not continue
+        overwrite: force to reset a download; will not continue
           previous download
         rate_limit: limit download at this rate
 
         """
         
-        # TODO: implement reset_download
+        # TODO: implement overwrite
         # TODO: implement rate_limit
 
         self._remote_url = remote_url
@@ -73,12 +73,12 @@ class Downloader(object):
             raise e
 
         if not chunk:
-            raise DownloaderException("Failed to download chunk of " str(chunk_size)
+            raise DownloaderException("Failed to download chunk of " + str(chunk_size)
                     + " bytes.", self.remote_size(), self.local_size())
             return
 
-        # TODO: we need reset_download logic here, but don't implement
-        # until we know how reset_download flag will work
+        # TODO: we need overwrite logic here, but don't implement
+        # until we know how overwrite flag will work
         self.touch_local_file()
         if self.local_size() == 0:
             flags = "wb"    # overwrite binary
@@ -109,7 +109,7 @@ class Downloader(object):
             #try:
             self.__response_obj = urllib2.urlopen(self.__request())
             info = self.__response_obj.info() # dict of http headers, HTTPMessage
-            self._remote_size = int( info["content-length"] )
+            self._remote_size = int(info["content-length"])
             #except Exception, e:
                 # raise whatever Exception object we caught, so we
                 # know how to deal with it in the future
@@ -208,8 +208,6 @@ class DownloaderThread(threading.Thread):
     
         # we need to call Thread's init method by convention
         threading.Thread.__init__(self)
-
-
         
     def run(self):
         # the list of previously calculated rates, used for calculating
