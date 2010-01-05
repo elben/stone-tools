@@ -88,10 +88,12 @@ class RemoteFile(object):
         if not chunk:
             raise RemoteFileException("Failed to download chunk of " + str(chunk_size)
                     + " bytes.", self.get_remote_size(), self.get_local_size())
-            return
 
-        # TODO: we need overwrite logic here, but don't implement
+        return chunk
+
+        # TODO: we need overwrite logic somewhere, but don't implement
         # until we know how overwrite flag will work
+        """
         self.touch_local_file()
         if self.get_local_size() == 0:
             flags = "wb"    # overwrite binary
@@ -100,7 +102,8 @@ class RemoteFile(object):
 
         with open(self.get_local_path(), flags) as f:
             f.write(chunk)
- 
+        """
+
     def __response(self):
         self.__update()
         return self.__response_obj
