@@ -61,21 +61,26 @@ class RemoteFile(object):
         self.__update_time_gap = 5.0 # seconds
         self.__prev_time_update = -self.__update_time_gap
 
+        self.__connected_once = False
+
         self.__response_obj = None
         #self.__update()
     
-    def read(self, chunk_size=100):
-        # TODO: if HTTPError 416, then remotesz == localsz
+    def read(self, chunk_size=128):
+        """
+        Returns data downloaded from remote file;
+        returns None if no data downloaded.
+        """
+
         try:
             if self.__response() is None:
-                return
+                return None
         except urllib2.HTTPError, e:
             print self.get_local_size()
             print self.get_remote_size()
-            if (str(e).count('416') > 0 and self.get_local_size() ==
-                    self.get_remote_size()):
+            if str(e).count('416') > 0:
                 # invalid range request caused by "finished" download
-                return
+                return None
             else:
                 raise e
 
