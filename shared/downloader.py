@@ -8,7 +8,7 @@ def enough_delay(prev_time, min_gap):
     
     return time.time() - prev_time >= min_gap
 
-class DownloaderException(Exception):
+class RemoteFileException(Exception):
     def __init__(self, msg, remote_file_sz=None, local_file_sz=None):
         self.message = msg
         self.remote_file_sz = remote_file_sz
@@ -19,22 +19,22 @@ class DownloaderException(Exception):
         s += "\nRemote size: " + str(self.remote_file_sz)
         return s
 
-class Downloader(object):
+class RemoteFile(object):
     """
     Downloads a file from a URL to a local directory.
     
-    Similar to GNU wget, Downloader continues a download if the file already
-    exists locally. Downloader also allows the file being downloaded to grow
+    Similar to GNU wget, RemoteFile continues a download if the file already
+    exists locally. RemoteFile also allows the file being downloaded to grow
     in size.
 
-    Use Downloader through DownloaderThread.
+    Use RemoteFile through Downloader.
     """
     
     def __init__(self, remote_url,
             local_dir = "", local_file = None,
             overwrite = False, rate_limit = -1):
         """
-        Creates a Downloader with a specified URL to download from.
+        Creates a RemoteFile with a specified URL to download from.
         
         remote_url: URL of file
         local_dir: directory to save file to
@@ -64,8 +64,21 @@ class Downloader(object):
         self.__response_obj = None
         #self.__update()
     
-    def download_chunk(self, chunk_size=100):
-        if self.__response() is None: return
+    def read(self, chunk_size=100):
+        # TODO: if HTTPError 416, then remotesz == localsz
+        try:
+            if self.__response() is None:
+                return
+        except urllib2.HTTPError, e:
+            print self.get_local_size()
+            print self.get_remote_size()
+            if (str(e).count('416') > 0 and self.get_local_size() ==
+                    self.get_remote_size()):
+                # invalid range request caused by "finished" download
+                return
+            else:
+                raise e
+
         try:
             chunk = self.__response().read(chunk_size)
         except Exception, e:
@@ -73,19 +86,19 @@ class Downloader(object):
             raise e
 
         if not chunk:
-            raise DownloaderException("Failed to download chunk of " + str(chunk_size)
-                    + " bytes.", self.remote_size(), self.local_size())
+            raise RemoteFileException("Failed to download chunk of " + str(chunk_size)
+                    + " bytes.", self.get_remote_size(), self.get_local_size())
             return
 
         # TODO: we need overwrite logic here, but don't implement
         # until we know how overwrite flag will work
         self.touch_local_file()
-        if self.local_size() == 0:
+        if self.get_local_size() == 0:
             flags = "wb"    # overwrite binary
         else:
             flags = "ab"    # append binary
 
-        with open(self.local_path(), flags) as f:
+        with open(self.get_local_path(), flags) as f:
             f.write(chunk)
  
     def __response(self):
@@ -94,8 +107,10 @@ class Downloader(object):
 
     def __request(self):
         # http://en.wikipedia.org/wiki/List_of_HTTP_headers
-        request = urllib2.Request(self.remote_url())
-        request.add_header("Range", "bytes=%s-" % (str(self.local_size())))
+        request = urllib2.Request(self.get_remote_url())
+        # NOTE: Range header endpoints are inclusive. i.e. 0-1 gives 2
+        # bytes.
+        request.add_header("Range", "bytes=%s-" % (str(self.get_local_size())))
         return request
 
     def __update(self):
@@ -109,7 +124,11 @@ class Downloader(object):
             #try:
             self.__response_obj = urllib2.urlopen(self.__request())
             info = self.__response_obj.info() # dict of http headers, HTTPMessage
-            self._remote_size = int(info["content-length"])
+
+            # headers contains full size of remote file; pulled out here
+            self._remote_size = int((info.headers.split("Content-Range: ")[1])
+                .split()[1].split('/')[1])
+
             #except Exception, e:
                 # raise whatever Exception object we caught, so we
                 # know how to deal with it in the future
@@ -123,19 +142,15 @@ class Downloader(object):
                 # print "Exception thrown from __update()" #in ", self.__name__
             #    raise e
             
-    def finished(self):
-        """Returns True if download is finished."""
-        return self.remote_size() == self.local_size()
-
-    def progress(self):
+    def get_progress(self):
         """Returns percentage (0.0 to 1.0) done."""
         remote_size = self.remote_size()
         if remote_size > 0:
-            return float(self.local_size()) / self.remote_size()
+            return float(self.get_local_size()) / self.get_remote_size()
         else:
             return 1.0
     
-    def local_size(self):
+    def get_local_size(self):
         """
         Return the size of the locally downloaded file.
         Returns -1 if size check failed.
@@ -143,36 +158,37 @@ class Downloader(object):
         
         try:
             self.touch_local_file()
-            return os.path.getsize(self.local_path())
+            return os.path.getsize(self.get_local_path())
         except OSError, e:
             #print "Error thrown from local_size() in", self.__name__
             print e
             return -1
     
-    def remote_size(self):
+    def get_remote_size(self):
         """Return the size of the remote file."""
         
         self.__update()
         return self._remote_size
     
-    def local_path(self):
+    def get_local_path(self):
         """Returns the local file path including file name."""
         
         return os.path.join(self._local_dir, self._local_file_name)
     
-    def remote_url(self):
+    def get_remote_url(self):
         """Returns the remote URL including file name."""
         
         return self._remote_url
     
     def touch_local_file(self):
+        """Similar to unix 'touch'."""
         if self.local_file_exists():
-            open(self.local_path(), 'a').close() 
+            open(self.get_local_path(), 'a').close() 
         else:
-            open(self.local_path(), 'w').close()
+            open(self.get_local_path(), 'w').close()
 
     def local_file_exists(self):
-        return os.path.exists(self.local_path())
+        return os.path.exists(self.get_local_path())
 
 class DownloaderThread(threading.Thread):
     """
@@ -194,7 +210,7 @@ class DownloaderThread(threading.Thread):
           also in seconds.
         """
 
-        self.dler = Downloader()
+        self.dler = RemoteFile()
         self._file = file
         self._calc_interval = calc_interval
         self._download_rate = 0.0
