@@ -15,10 +15,6 @@ class DownloaderTest(unittest.TestCase):
         self.tc.set_download_rate(25.0)
         self.assertEqual(self.tc.get_download_rate(), 25.0)
 
-    def test_threadcomm2(self):
-        self.tc.set_progress(0.5)
-        self.assertEqual(self.tc.get_progress(), 0.5)
-
     def test_threadcomm3(self):
         self.tc.set_downloading(True)
         self.assertEqual(self.tc.get_downloading(), True)
@@ -39,13 +35,5 @@ class DownloaderTest(unittest.TestCase):
         self.assertEqual(self.tc.get_downloading(), False)
         self.assertEqual(self.tc.get_downloading(), False)
 
-    def test_threadcomm6(self):
-        self.tc.set_progress(0.1)
-        self.assertEqual(self.tc.get_progress(), 0.1)
-
-        self.tc.set_progress(0.75)
-        self.assertEqual(self.tc.get_progress(), 0.75)
-        self.assertEqual(self.tc.get_progress(), 0.75)
-    
 if __name__ == '__main__':
     unittest.main()

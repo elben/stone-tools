@@ -18,6 +18,8 @@ class RemoteFile(object):
     increasing remote file sizes.
     
     Use RemoteFile through Downloader.
+    
+    Thread-safe.
     """
     
     def __init__(self, remote_url, local_dir = "", local_file = None):
@@ -28,6 +30,10 @@ class RemoteFile(object):
         local_dir: directory to save file to
         local_file: name file will be saved as
         """
+        
+        # used for locking the __update method and such, since multiple threads
+        # will be calling this (possibly) simultaneously
+        self._update_lock = threading.RLock()
         
         self._remote_url = remote_url
         self._remote_file = os.path.basename(self._remote_url)
@@ -75,6 +81,9 @@ class RemoteFile(object):
         remote file info.
         """
         
+        # lock everyone out until we're done, just to be safe
+        self._update_lock.acquire()
+        
         if enough_delay(self.__prev_time_update, self.__update_time_gap):
             self.__prev_time_update = time.time()
             try:
@@ -107,6 +116,9 @@ class RemoteFile(object):
                 #   IOError
                 # print "Exception thrown from __update()" #in ", self.__name__
             #    raise e
+        
+        # let everyone back in
+        self._update_lock.release()
             
     def get_progress(self):
         """Returns percentage (0.0 to 1.0) done."""
@@ -115,14 +127,6 @@ class RemoteFile(object):
             return float(self.get_local_size()) / self.get_remote_size()
         else:
             return 1.0
-    
-    def get_local_size(self):
-        """
-        Return the size of the locally downloaded file.
-        """
-        
-        open(self.get_local_path(), "ab").close()
-        return os.path.getsize(self.get_local_path())
     
     def get_remote_size(self):
         """Return the size of the remote file."""
@@ -140,13 +144,23 @@ class RemoteFile(object):
         
         return self._remote_url
     
+    def get_local_size(self):
+        """Attempt to get the file size of the given file, else return -1."""
+        
+        try:
+            return os.path.getsize( self.get_local_path() )
+        except OSError, ose: # file not found
+            return 0
+
 class Downloader(object):
-    def __init__(self, remote_url, local_dir, local_file, redownload = False):
+    def __init__(self, remote_url, local_dir = "", local_file = None,
+                 redownload = False):
         self._thread_comm = ThreadCommunicator()
+        self._remote_file = RemoteFile(remote_url, local_dir, local_file)
         self._thread = DownloadThread( self._thread_comm, remote_url,
                                        local_dir, local_file, redownload )
         
-        # start the thread.  DOES NOT start the download, that's what 
+        # start the thread. DOES NOT start the download, that's what 
         # the 'start()' method is for
         self._thread.start()
     
@@ -159,8 +173,21 @@ class Downloader(object):
     def get_download_rate(self):
         return self._thread_comm.get_download_rate()
     
-    def get_percent_comlete(self):
-        return self._thread_comm.get_percent_comlete()
+    def get_progress(self):
+        """Returns percentage (0.0 to 1.0) done."""
+        return self._remote_file.get_progress()
+    
+    def get_remote_size(self):
+        return self._remote_file.get_remote_size()
+    
+    def get_local_size(self):
+        return self._remote_file.get_local_size()
+    
+    def get_local_path(self):
+        return self._remote_file.get_local_path()
+    
+    def get_remote_url(self):
+        return self._remote_file.get_remote_url()
 
 class ThreadCommunicator(object):
     """
@@ -173,9 +200,10 @@ class ThreadCommunicator(object):
     
     def __init__(self):
         # used so only one thread can modifiy member variables at a time
-        self._lock = threading.RLock()
+        # use different ones so we can modify different resources simultaneuosly
+        self._downloading_lock = threading.RLock()
+        self._download_rate_lock = threading.RLock()
 
-        self._progress = 0.0
         self._download_rate = 0.0
         self._downloading = False
     
@@ -183,23 +211,16 @@ class ThreadCommunicator(object):
         return self._downloading
     
     def set_downloading(self, new_value):
-        with self._lock:
+        with self._downloading_lock:
             self._downloading = new_value
     
     def get_download_rate(self):
         return self._download_rate
     
     def set_download_rate(self, rate):
-        with self._lock:
+        with self._download_rate_lock:
             self._download_rate = rate
-
-    def get_progress(self):
-        return self._progress
     
-    def set_progress(self, percent):
-        with self._lock:
-            self._progress = percent
-
 class DownloaderThread(threading.Thread):
     """
     Downloads a file from a URL to a local directory.
@@ -209,10 +230,9 @@ class DownloaderThread(threading.Thread):
     downloaded to grow in size.
     """
     
-    def __init__(self, comm, remote_url, local_dir, local_file,
-                 redownload = False):
+    def __init__(self, comm, remote_file, redownload = False):
         
-        self._remote_file = RemoteFile(remote_url, local_dir, local_file)
+        self._remote_file = remote_file
         self._local_file = os.path.join(local_dir, local_file) # join 'em up!
         
         # the communicator object we will transmit our status through
@@ -255,11 +275,10 @@ class DownloaderThread(threading.Thread):
                 with open(self._local_file, "ab") as f:
                     # how large a chunk we want to 'read' at a time, in bytes
                     f.write( self._remote_file.read() )
+            else:
+                # anti-spin precautions
+                time.sleep(0.1)
                 
-                # set the progress of our file
-                self._thread_comm.set_progress( 
-                    self._remote_file.get_progress() )
-
             # FILE SIZE CALCULATION
             # only update every self._time_interval seconds
             if enough_time(prev_time_update, self._calc_interval):
@@ -275,20 +294,13 @@ class DownloaderThread(threading.Thread):
                 rate_list.pop(0) # pop from the front, ie. dequeue
             
                 # change the comm's rate to the average rate over our interval
-                self._comm.set_download_rate( self._average_list(rate_list) )
+                ave = lambda lst: float( sum(lst) ) / len(lst)
+                self._comm.set_download_rate( ave(rate_list) )
             
-    def _average_list(self, list):
-        """Return the average of a list of numbers."""
-        
-        return float(sum(list)) / len(list)
-    
     def _get_file_size(self, f):
         """Attempt to get the file size of the given file, else return -1."""
         
         try:
             return os.path.getsize(f)
         except OSError, ose: # file not found
-            print ose
-            print "File not found:", "'" + str(f) + "'"
-            
-            return -1
+            return 0
