@@ -40,6 +40,32 @@ SIGNAL_FILES = [ EXIST_FILE,
 # block size to read from the device
 READ_SIZE = 1024 * 400 # 400Kb
 
+class HDPVR:
+    def __init__(self, device_name, mac_addr):
+        self.device_name = device_name  # /dev/device_name
+        self.mac_addr = mac_addr
+        self.stream = None
+
+    def open(self):
+        """Returns True if able to open device stream."""
+        if self.exists():
+            self.stream = open(os.path.join("/dev",  self.device_name), "r")
+            return True
+        return False
+
+    def close(self):
+        pass
+
+    def read(self, bytes=1024*400):
+        pass
+
+    def exists(self):
+        """Returns True if OS detected HDPVR."""
+        dev_dir = os.listdir("/dev")
+        if str(self.device_name) in dev_dir:
+            return True
+        return False
+
 def main():
     # flags
     removed_signal_files = False
@@ -205,3 +231,12 @@ def nfs_mounted(ip):
 
 if __name__ == "__main__":
     main()
+
+def example():
+    hdpvr = HDPVR("video0")
+    hdpvr.open()
+
+    while get_data:
+        data = hdpvr.read(bytes)
+        # append data into /var/www/video.ts
+    hdpvr.close()
