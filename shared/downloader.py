@@ -51,9 +51,9 @@ class RemoteFile(object):
 
         try:
             if self.__response() is None:
-                return None
+                return ''
         except FileSizesEqualException, e:
-            return None
+            return ''
 
         return self.__response().read(chunk_size)
 
@@ -100,7 +100,8 @@ class RemoteFile(object):
             info = self.__response_obj.info() # dict of http headers, HTTPMessage
 
             # headers contains full size of remote file; pulled out here
-            self._remote_size = int((info.headers.split("Content-Range: ")[1])
+            headers_flat = ''.join(info.headers)
+            self._remote_size = int(headers_flat.split("Content-Range: ")[1]
                 .split()[1].split('/')[1])
 
             #except Exception, e:
@@ -127,16 +128,10 @@ class RemoteFile(object):
     def get_local_size(self):
         """
         Return the size of the locally downloaded file.
-        Returns -1 if size check failed.
         """
         
-        try:
-            self.touch_local_file()
-            return os.path.getsize(self.get_local_path())
-        except OSError, e:
-            #print "Error thrown from local_size() in", self.__name__
-            print e
-            return -1
+        self.touch_local_file()
+        return os.path.getsize(self.get_local_path())
     
     def get_remote_size(self):
         """Return the size of the remote file."""
