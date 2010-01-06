@@ -55,7 +55,7 @@ class RemoteFile(object):
         except FileSizesEqualException, e:
             return ''
 
-        return self.__response().read(chunk_size)
+        return self.__response().read(int(chunk_size))
 
         """
         self.touch_local_file()
@@ -97,12 +97,15 @@ class RemoteFile(object):
                 else:
                     raise e
 
-            info = self.__response_obj.info() # dict of http headers, HTTPMessage
+            info = self.__response_obj.info() # dict of HTTP headers
 
             # headers contains full size of remote file; pulled out here
             headers_flat = ''.join(info.headers)
-            self._remote_size = int(headers_flat.split("Content-Range: ")[1]
-                .split()[1].split('/')[1])
+            if info.has_key("Content-Range"):
+                self._remote_size = int(info.get("Content-Range").split('/')[1])
+            elif info.has_key("Content-Length"):
+                # we did not specify range
+                self._remote_size = int(info.get("Content-Length"))
 
             #except Exception, e:
                 # raise whatever Exception object we caught, so we
