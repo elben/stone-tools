@@ -11,9 +11,6 @@ def enough_delay(prev_time, min_gap):
 class FileSizesEqualException(Exception):
     pass
 
-
-
-
 class RemoteFile(object):
     """
     Creates a connection with a remote file via HTTP. RemoteFile reads data
@@ -268,9 +265,7 @@ class DownloaderThread(threading.Thread):
                 # open the file for binary appending
                 with open(self._local_file, "ab") as f:
                     # how large a chunk we want to 'read' at a time, in bytes
-                    read_size = 100
-                    
-                    f.write( self._remote_file.read(read_size) )
+                    f.write( self._remote_file.read() )
                 
                 # set the progress of our file
                 self._thread_comm.set_progress( 
