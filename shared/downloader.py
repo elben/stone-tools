@@ -132,7 +132,7 @@ class RemoteFile(object):
         Return the size of the locally downloaded file.
         """
         
-        self.touch_local_file()
+        open(self.get_local_path(), "ab").close()
         return os.path.getsize(self.get_local_path())
     
     def get_remote_size(self):
@@ -237,7 +237,7 @@ class DownloaderThread(threading.Thread):
         self._num_calcs = max(1, int(time_interval / self._calc_interval))
         
         # make sure the local file exists by 'touch'-ing it
-        open(self._local_file, "a").close()
+        open(self._local_file(), "ab").close()
             
         # remove the old file if 'redownload' was specified
         if redownload:
