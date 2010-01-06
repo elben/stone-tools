@@ -46,7 +46,7 @@ class RemoteFile(object):
     def read(self, chunk_size=128):
         """
         Returns data downloaded from remote file;
-        returns None if no data downloaded.
+        returns empty string if no data downloaded.
         """
 
         try:
@@ -56,17 +56,6 @@ class RemoteFile(object):
             return ''
 
         return self.__response().read(int(chunk_size))
-
-        """
-        self.touch_local_file()
-        if self.get_local_size() == 0:
-            flags = "wb"    # overwrite binary
-        else:
-            flags = "ab"    # append binary
-
-        with open(self.get_local_path(), flags) as f:
-            f.write(chunk)
-        """
 
     def __response(self):
         self.__update()
