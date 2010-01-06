@@ -40,29 +40,42 @@ SIGNAL_FILES = [ EXIST_FILE,
 # block size to read from the device
 READ_SIZE = 1024 * 400 # 400Kb
 
+class HDPVRException(Exception):
+    pass
+
 class HDPVR:
-    def __init__(self, device_name, mac_addr):
-        self.device_name = device_name  # /dev/device_name
-        self.mac_addr = mac_addr
-        self.stream = None
+    def __init__(self, device):
+        self.device = str(device)    # full path to device
+        self.__stream = None
 
     def open(self):
-        """Returns True if able to open device stream."""
+        """
+        Opens streaming HDPVR device for reading.
+        Throws HDPVRException if failed to open.
+        """
         if self.exists():
-            self.stream = open(os.path.join("/dev",  self.device_name), "r")
-            return True
-        return False
+            self.__stream = open(self.device, "r")
+        else:
+            except HDPVRException("Could not open HDPVR device " +
+                    self.device + ". Device does not exist.")
 
     def close(self):
-        pass
+        if self.exists():
+            self.__stream.close()
+        else:
+            except HDPVRException("Could not close HDPVR device " +
+                    self.device + ". Device does not exist.")
 
     def read(self, bytes=1024*400):
-        pass
+        if self.__stream is None:
+            except HDPVRException("HDPVR device " + self.device +
+                    " not open.")
+        return self.__stream.read(bytes)
 
     def exists(self):
         """Returns True if OS detected HDPVR."""
         dev_dir = os.listdir("/dev")
-        if str(self.device_name) in dev_dir:
+        if str(self.device) in dev_dir:
             return True
         return False
 

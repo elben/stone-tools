@@ -162,8 +162,13 @@ class RemoteFile(object):
     def get_remote_size(self):
         """Returns the size of the remote file. after updating it."""
         
-        self.__update()
-        return self._remote_size
+        try:
+            self.__update()
+        except FileSizesEqualException, e:
+            pass
+        finally:
+            # at least return the last size we found
+            return self._remote_size
     
     def get_local_path(self):
         """Returns the local file path including file name."""
@@ -327,7 +332,11 @@ class DownloadThread(threading.Thread):
                 # open the file for binary appending
                 with open(self._remote_file.get_local_path(), "ab") as f:
                     # how large a chunk we want to 'read' at a time, in bytes
-                    f.write( self._remote_file.read() )
+                    try:
+                        f.write( self._remote_file.read() )
+                    except FileSizesEqualException, e:
+                        # we're 'finished' downloading, at least for now
+                        self._thread_comm.set_download_rate( 1.0 )
             else:
                 # anti-spin precautions
                 time.sleep(0.1)
