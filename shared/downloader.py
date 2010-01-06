@@ -99,8 +99,7 @@ class RemoteFile(object):
 
             info = self.__response_obj.info() # dict of HTTP headers
 
-            # headers contains full size of remote file; pulled out here
-            headers_flat = ''.join(info.headers)
+            # attempt to get new remote size
             if info.has_key("Content-Range"):
                 self._remote_size = int(info.get("Content-Range").split('/')[1])
             elif info.has_key("Content-Length"):
