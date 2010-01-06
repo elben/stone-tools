@@ -43,7 +43,7 @@ class DownloaderTest(unittest.TestCase):
         self.assert_(data == str)
 
     def test_download3(self):
-        self.d3.start()
+        self.d3.start()c
         
         while self.d3.get_progress() < 1.0:
             time.sleep(1)

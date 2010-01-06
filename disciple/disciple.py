@@ -247,14 +247,17 @@ def nfs_mounted(ip):
         return True
     return False
 
-if __name__ == "__main__":
-    main()
-
-def example():
-    hdpvr = HDPVR("video0")
+def example_hdpvr():
+    hdpvr = HDPVR("/dev/video0")
+    while not hdpvr.exists():
+        time.sleep(0.1)
     hdpvr.open()
 
     while get_data:
         data = hdpvr.read(bytes)
         # append data into /var/www/video.ts
     hdpvr.close()
+
+if __name__ == "__main__":
+    main()
+
