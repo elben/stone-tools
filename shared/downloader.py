@@ -11,6 +11,9 @@ def enough_delay(prev_time, min_gap):
 class FileSizesEqualException(Exception):
     pass
 
+
+
+
 class RemoteFile(object):
     """
     Creates a connection with a remote file via HTTP. RemoteFile reads data
@@ -34,10 +37,7 @@ class RemoteFile(object):
         self._local_dir = local_dir
         
         # defaults to using same file name as remote file
-        if not local_file:
-            self._local_file_name = self._remote_file
-        else:
-            self._local_file_name = local_file
+        self._local_file_name = self._remote_file if not local_file else local_file
         
         self._remote_size = 0
         
@@ -49,16 +49,27 @@ class RemoteFile(object):
     def read(self, chunk_size=128):
         """
         Returns data downloaded from remote file;
-        returns 'None' if no data downloaded.
+        returns None if no data downloaded.
         """
 
         try:
             if self.__response() is None:
-                return None
+                return ''
         except FileSizesEqualException, e:
-            return None
+            return ''
 
-        return self.__response().read(chunk_size)
+        return self.__response().read(int(chunk_size))
+
+        """
+        self.touch_local_file()
+        if self.get_local_size() == 0:
+            flags = "wb"    # overwrite binary
+        else:
+            flags = "ab"    # append binary
+
+        with open(self.get_local_path(), flags) as f:
+            f.write(chunk)
+        """
 
     def __response(self):
         self.__update()
@@ -89,12 +100,14 @@ class RemoteFile(object):
                 else:
                     raise e
 
-            # dict of http headers, HTTPMessage
-            info = self.__response_obj.info()
+            info = self.__response_obj.info() # dict of HTTP headers
 
-            # headers contains full size of remote file; pulled out here
-            self._remote_size = int((info.headers.split("Content-Range: ")[1])
-                .split()[1].split('/')[1])
+            # attempt to get new remote size
+            if info.has_key("Content-Range"):
+                self._remote_size = int(info.get("Content-Range").split('/')[1])
+            elif info.has_key("Content-Length"):
+                # we did not specify range
+                self._remote_size = int(info.get("Content-Length"))
 
             #except Exception, e:
                 # raise whatever Exception object we caught, so we
@@ -113,23 +126,17 @@ class RemoteFile(object):
         """Returns percentage (0.0 to 1.0) done."""
         remote_size = self.get_remote_size()
         if remote_size > 0:
-            return float( self.get_local_size() ) / self.get_remote_size()
+            return float(self.get_local_size()) / self.get_remote_size()
         else:
             return 1.0
     
     def get_local_size(self):
         """
         Return the size of the locally downloaded file.
-        Returns -1 if size check failed.
         """
         
-        try:
-            self.touch_local_file()
-            return os.path.getsize(self.get_local_path())
-        except OSError, e:
-            #print "Error thrown from local_size() in", self.__name__
-            print e
-            return -1
+        self.touch_local_file()
+        return os.path.getsize(self.get_local_path())
     
     def get_remote_size(self):
         """Return the size of the remote file."""
