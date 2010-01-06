@@ -1,9 +1,31 @@
 import unittest
+import os
 from downloader import *
 
 class DownloaderTest(unittest.TestCase):
 
     def setUp(self):
+        # make sure these files don't already exist in this directory
+        try:
+            os.remove('testdl.txt')
+        except:
+            pass
+        
+        try:
+            os.remove('testdl2.txt')
+        except:
+            pass
+        
+        try:
+            os.remove('medical.txt')
+        except:
+            pass
+        
+        try:
+            os.remove('empty.txt')
+        except:
+            pass
+        
         self.rf1 = RemoteFile('http://elbenshira.com/d/testdl.txt')
         self.rf2 = RemoteFile('http://elbenshira.com/d/testdl2.txt')
         self.rf3 = RemoteFile('http://elbenshira.com/d/medical.txt')

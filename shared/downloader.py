@@ -3,27 +3,6 @@ import threading
 import os
 import time
 
-class Utils(object):
-    @staticmethod
-    def enough_delay(prev_time, min_gap):
-        """
-        Returns True if the given time has passed since the given previous time.
-        """
-        
-        return time.time() - prev_time >= min_gap
-
-    @staticmethod
-    def get_file_size(f):
-        """
-        Return the size in bytes of the given file.  Returns '0' if the file does
-        not exist.
-        """
-        
-        try:
-            return os.path.getsize( f )
-        except OSError, ose: # file not found
-            return 0
-    
 class FileSizesEqualException(Exception):
     pass
 
@@ -63,11 +42,11 @@ class RemoteFile(object):
         
         self._remote_size = 0
         
-        self.__update_time_gap = 5.0 # seconds
-        self.__prev_time_update = -self.__update_time_gap
+        self._update_interval = 5.0 # seconds
+        self._prev_update_time = -self._update_interval
         
         # used for making sure our response object is in sync
-        self.__response_obj = None
+        self._response_obj = None
     
     def read(self, chunk_size = 128):
         """
@@ -76,23 +55,23 @@ class RemoteFile(object):
         """
         
         try:
-            if self.__response() is None:
+            if self._response() is None:
                 return ''
         except FileSizesEqualException, e:
             return ''
 
-        return self.__response().read( int(chunk_size) )
+        return self._response().read( int(chunk_size) )
 
-    def __response(self):
+    def _response(self):
         """Makes sure the response is up to date before returning it."""
         
         try:
-            self.__update()
-            return self.__response_obj
+            self._update()
+            return self._response_obj
         except FileSizesEqualException, e:
             raise e
 
-    def __request(self):
+    def _request(self):
         """Makes sure the request object is up to date before returning it."""
         
         # http://en.wikipedia.org/wiki/List_of_HTTP_headers
@@ -103,52 +82,51 @@ class RemoteFile(object):
         
         return request
 
-    def __update(self):
+    def _update(self):
         """
         Connect to the remote URL, get a new response object, and update
         remote file info.
         """
         
         # lock everyone out until we're done, just to be safe
-        self._update_lock.acquire()
-        
-        if Utils.enough_delay(self.__prev_time_update, self.__update_time_gap):
-            self.__prev_time_update = time.time()
+        with self._update_lock:
+            if self._enough_delay( self._prev_update_time,
+                                   self._update_interval ):
+                self._prev_update_time = time.time()
+                
+                # try to get the data from the remote server
+                try:
+                    self._response_obj = urllib2.urlopen(self._request())
+                except urllib2.HTTPError, e:
+                    # invalid range request caused by "finished" download
+                    if str(e).count('416') > 0:
+                        raise FileSizesEqualException( 
+                            "Local size == remote size" )
+                    else:
+                        raise e
             
-            # try to get the data from the remote server
-            try:
-                self.__response_obj = urllib2.urlopen(self.__request())
-            except urllib2.HTTPError, e:
-                # invalid range request caused by "finished" download
-                if str(e).count('416') > 0:
-                    raise FileSizesEqualException("Local size == remote size")
-                else:
-                    raise e
-            
-            # dict of HTTP headers
-            info = self.__response_obj.info()
-
-            # attempt to get new remote size from headers dict
-            if info.has_key("Content-Range"):
-                self._remote_size = int(info.get("Content-Range").split('/')[1])
-            elif info.has_key("Content-Length"):
-                # we did not specify range
-                self._remote_size = int(info.get("Content-Length"))
-
-            # whatever Exception object we caught will be raise so we know how
-            # to deal with it in the future.
-            # 
-            # Possible (not complete) list of exceptions:
-            #   urllib2.HTTPError - most likely, couldn't connect
-            #   urllib2.URLError - if we use improper protocol "httpdfsk://..."
-            #   httplib.BadStatusLine
-            #   httplib.InvalidURL
-            #   ValueError
-            #   IOError
-        
-        # let everyone back in
-        self._update_lock.release()
-            
+                # dict of HTTP headers
+                info = self._response_obj.info()
+    
+                # attempt to get new remote size from headers dict
+                if info.has_key("Content-Range"):
+                    rsize = int(info.get("Content-Range").split('/')[1])
+                    self._remote_size = rsize
+                elif info.has_key("Content-Length"):
+                    # we did not specify range
+                    self._remote_size = int(info.get("Content-Length"))
+    
+                # whatever Exception object we caught will be raise so we 
+                # how to deal with it in the future.
+                # 
+                # Possible (not complete) list of exceptions:
+                #   urllib2.HTTPError - most likely, couldn't connect
+                #   urllib2.URLError - if we use improper protocol "dfsk://..."
+                #   httplib.BadStatusLine
+                #   httplib.InvalidURL
+                #   ValueError
+                #   IOError
+                    
     def get_progress(self):
         """
         Returns the ratio of local file size to remote file size as a float
@@ -165,7 +143,7 @@ class RemoteFile(object):
         """Returns the size of the remote file. after updating it."""
         
         try:
-            self.__update()
+            self._update()
         except FileSizesEqualException, e:
             pass
         finally:
@@ -185,7 +163,17 @@ class RemoteFile(object):
     def get_local_size(self):
         """Returns the file size of the local file."""
         
-        return Utils.get_file_size( self.get_local_path() )
+        try:
+            return os.path.getsize( self.get_local_path() )
+        except OSError, ose: # file not found
+            return 0
+    
+    def _enough_delay(self, prev_time, min_gap):
+        """
+        Returns True if the given time has passed since the given previous time.
+        """
+        
+        return time.time() - prev_time >= min_gap
 
 class Downloader(object):
     def __init__(self, remote_url, local_dir = "", local_file = None,
@@ -322,7 +310,7 @@ class DownloadThread(threading.Thread):
         rate_list = [0.0] * self._num_calcs
         
         # the last file size we got, used to calculate change in file size
-        prev_file_size = Utils.get_file_size(self._remote_file.get_local_path())
+        prev_file_size = self._get_file_size(self._remote_file.get_local_path())
         
         # used to calculate the download rate every calc_interval seconds
         prev_time_update = -self._calc_interval
@@ -345,10 +333,10 @@ class DownloadThread(threading.Thread):
                 
             # FILE SIZE CALCULATION
             # only update every self._time_interval seconds
-            if Utils.enough_delay(prev_time_update, self._calc_interval):
+            if self._enough_delay(prev_time_update, self._calc_interval):
                 prev_time_update = time.time()
                 
-                file_size = Utils.get_file_size( 
+                file_size = self._get_file_size( 
                     self._remote_file.get_local_path() )
                 bytes_per_second = ( (file_size - prev_file_size) /
                                      float(self._calc_interval) )
@@ -361,3 +349,22 @@ class DownloadThread(threading.Thread):
                 # change the comm's rate to the average rate over our interval
                 ave = lambda lst: float( sum(lst) ) / len(lst)
                 self._thread_comm.set_download_rate( ave(rate_list) )
+    
+    def _enough_delay(self, prev_time, min_gap):
+        """
+        Returns True if the given time has passed since the given previous time.
+        """
+        
+        return time.time() - prev_time >= min_gap
+
+    def _get_file_size(self, f):
+        """
+        Return the size in bytes of the given file.  Returns '0' if the file does
+        not exist.
+        """
+        
+        try:
+            return os.path.getsize( f )
+        except OSError, ose: # file not found
+            return 0
+    

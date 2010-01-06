@@ -16,7 +16,7 @@ class DownloaderTest(unittest.TestCase):
         self.d1.start()
         
         while self.d1.get_progress() < 1.0:
-            time.sleep(1)
+            time.sleep(0.1)
         
         str  = "1 this is a test download\n"
         str += "2 many lines are here\n"
@@ -32,7 +32,7 @@ class DownloaderTest(unittest.TestCase):
         self.d2.start()
         
         while self.d2.get_progress() < 1.0:
-            time.sleep(1)
+            time.sleep(0.1)
         
         str  = "1234567890"
         
@@ -43,10 +43,10 @@ class DownloaderTest(unittest.TestCase):
         self.assert_(data == str)
 
     def test_download3(self):
-        self.d3.start()c
+        self.d3.start()
         
         while self.d3.get_progress() < 1.0:
-            time.sleep(1)
+            time.sleep(0.1)
         
         data = ""
         with open(self.d3.get_local_path()) as f:
@@ -58,13 +58,28 @@ class DownloaderTest(unittest.TestCase):
         self.d4.start()
         
         while self.d4.get_progress() < 1.0:
-            time.sleep(1)
+            time.sleep(0.1)
         
-        data = ""
+        data = None
         with open(self.d4.get_local_path()) as f:
             data = f.read()
             
         self.assert_( data == "" )
+
+    def test_download5(self):
+        self.d3.start()
+        time.sleep(0.1)
+        self.d3.stop()
+        self.d3.start()
+        
+        while self.d3.get_progress() < 1.0:
+            time.sleep(0.1)
+        
+        data = ""
+        with open(self.d3.get_local_path()) as f:
+            data = f.read()
+            
+        self.assert_( len(data) == 2490041 )
 
 if __name__ == '__main__':
     unittest.main()
