@@ -86,9 +86,11 @@ class RemoteFile(object):
     def __response(self):
         """Makes sure the response is up to date before returning it."""
         
-        self.__update()
-        
-        return self.__response_obj
+        try:
+            self.__update()
+            return self.__response_obj
+        except FileSizesEqualException, e:
+            raise e
 
     def __request(self):
         """Makes sure the request object is up to date before returning it."""

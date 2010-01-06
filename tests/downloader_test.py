@@ -34,15 +34,37 @@ class DownloaderTest(unittest.TestCase):
         while self.d2.get_progress() < 1.0:
             time.sleep(1)
         
-        str  = "1 this is a test download\n"
-        str += "2 many lines are here\n"
-        str += "3 well, mostly three\n"
+        str  = "1234567890"
         
         data = ""
-        with open(self.d1.get_local_path()) as f:
+        with open(self.d2.get_local_path()) as f:
+            data = f.read()
+        
+        self.assert_(data == str)
+
+    def test_download3(self):
+        self.d3.start()
+        
+        while self.d3.get_progress() < 1.0:
+            time.sleep(1)
+        
+        data = ""
+        with open(self.d3.get_local_path()) as f:
             data = f.read()
             
-        self.assert_(data == str)
+            self.assert_( len(data) == 2490041 )
+
+    def test_download4(self):
+        self.d4.start()
+        
+        while self.d4.get_progress() < 1.0:
+            time.sleep(1)
+        
+        data = ""
+        with open(self.d4.get_local_path()) as f:
+            data = f.read()
+            
+        self.assert_( data == "" )
 
 if __name__ == '__main__':
     unittest.main()

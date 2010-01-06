@@ -45,7 +45,7 @@ class HDPVRException(Exception):
 
 class HDPVR:
     def __init__(self, device):
-        self.device = str(device)    # full path to device
+        self.__device = str(device)    # full path to device
         self.__stream = None
 
     def open(self):
@@ -54,30 +54,35 @@ class HDPVR:
         Throws HDPVRException if failed to open.
         """
         if self.exists():
-            self.__stream = open(self.device, "r")
+            self.__stream = open(self.get_device_name(), "r")
         else:
             except HDPVRException("Could not open HDPVR device " +
-                    self.device + ". Device does not exist.")
+                    self.get_device_name() + ". Device does not exist.")
 
     def close(self):
+        """
+        User must manually close HDPVR object.
+        """
         if self.exists():
             self.__stream.close()
         else:
             except HDPVRException("Could not close HDPVR device " +
-                    self.device + ". Device does not exist.")
+                    self.get_device_name() + ". Device does not exist.")
 
     def read(self, bytes=1024*400):
         if self.__stream is None:
-            except HDPVRException("HDPVR device " + self.device +
+            except HDPVRException("HDPVR device " + self.get_device_name() +
                     " not open.")
         return self.__stream.read(bytes)
 
     def exists(self):
         """Returns True if OS detected HDPVR."""
-        dev_dir = os.listdir("/dev")
-        if str(self.device) in dev_dir:
+        if os.path.exists(self.get_device_name()):
             return True
         return False
+
+    def get_device_name(self):
+        return self.__device
 
 def main():
     # flags

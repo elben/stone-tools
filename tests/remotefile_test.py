@@ -79,6 +79,11 @@ class DownloaderTest(unittest.TestCase):
         chunk = self.rf2.read(chunk_size=3.8)
         self.assertEqual(chunk, '123')
 
+    def test_read14(self):
+        chunk = self.rf2.read(chunk_size=99999999)
+        self.assertEqual(chunk, '1234567890')
+        rf2_copy = RemoteFile('http://elbenshira.com/d/testdl2.txt')
+        self.assertEqual(rf2_copy.read(99999), '1234567890')
 """
     def testExample2(self):
         truths = [True, True, True]
