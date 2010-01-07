@@ -84,7 +84,47 @@ class HDPVR:
     def get_device_name(self):
         return self.__device
 
-class DiscipleState
+class DiscipleState:
+    DISCIPLE_NONEXISTENT = 0
+    DISCIPLE_EXISTS = 1
+    DISCIPLE_EXISTS_ARMED = 2
+    DISCIPLE_EXISTS_ARMED_RECORDING = 3
+
+    def __init__(self, exists = False, armed = False, recording = False):
+        self.__exists = exists
+        self.__armed = armed
+        self.__recording = recording
+    
+    def current_state(self):
+        if self.__exists and self.__armed and self.__recording:
+            return DiscipleState.DISCIPLE_EXISTS_ARMED_RECORDING
+        elif self.__exists and self.__armed:
+            return DiscipleState.DISCIPLE_EXISTS_ARMED
+        elif self.__exists:
+            return DiscipleState.DISCIPLE_EXISTS
+
+        return DiscipleState.DISCIPLE_NONEXISTENT
+        
+    def exists(self):
+        return self.__exists
+    
+    def is_armed(self):
+        return self.__armed
+
+    def is_recording(self):
+        return self.__recording
+
+    def set_exists(self, flag):
+        if flag:
+            self.__exists = True
+        else:
+            if self.current_state() == DiscipleState.
+            self.__exists = False
+            
+    def set_armed(self):
+        pass
+    def set_recording(self):
+        pass
 
 class Disciple:
     def __init__(self, device, video_dir="/var/www",
