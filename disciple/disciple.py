@@ -6,7 +6,7 @@ import sys
 import time
 import random
 import ConfigParser
-from discipleserver import *
+from libdisciple import *
 
 # parse config file
 config_file = "../config/config.conf"
@@ -41,153 +41,6 @@ SIGNAL_FILES = [ EXIST_FILE,
 # block size to read from the device
 READ_SIZE = 1024 * 400 # 400Kb
 
-class HDPVRException(Exception):
-    pass
-
-class HDPVR:
-    def __init__(self, device):
-        self.__device = str(device)    # full path to device
-        self.__stream = None
-
-    def open(self):
-        """
-        Opens streaming HDPVR device for reading.
-        Throws HDPVRException if failed to open.
-        """
-        if self.exists():
-            self.__stream = open(self.get_device_name(), "r")
-        else:
-            except HDPVRException("Could not open HDPVR device " +
-                    self.get_device_name() + ". Device does not exist.")
-
-    def close(self):
-        """
-        User must manually close HDPVR object.
-        """
-        if self.exists():
-            self.__stream.close()
-        else:
-            except HDPVRException("Could not close HDPVR device " +
-                    self.get_device_name() + ". Device does not exist.")
-
-    def read(self, bytes=1024*400):
-        if self.__stream is None:
-            except HDPVRException("HDPVR device " + self.get_device_name() +
-                    " not open.")
-        return self.__stream.read(bytes)
-
-    def exists(self):
-        """Returns True if OS detected HDPVR."""
-        if os.path.exists(self.get_device_name()):
-            return True
-        return False
-
-    def get_device_name(self):
-        return self.__device
-
-class IllegalStateException(Exception):
-    pass
-
-class DiscipleState:
-    DISCIPLE_NONEXISTENT = 0
-    DISCIPLE_EXISTS = 1
-    DISCIPLE_EXISTS_ARMED = 2
-    DISCIPLE_EXISTS_ARMED_RECORDING = 3
-
-    def __init__(self, id = "", exists = False, armed = False, recording = False):
-        self.__id = id
-        self.__exists = exists
-        self.__armed = armed
-        self.__recording = recording
-
-        self.__command_arm = False
-        self.__command_disarm = False
-        self.__command_record = False
-        self.__command_stop_recording = False
-
-    def get_id(self):
-        return self.__id
-
-    def current_state(self):
-        if self.__exists and self.__armed and self.__recording:
-            return DiscipleState.DISCIPLE_EXISTS_ARMED_RECORDING
-        elif self.__exists and self.__armed:
-            return DiscipleState.DISCIPLE_EXISTS_ARMED
-        elif self.__exists:
-            return DiscipleState.DISCIPLE_EXISTS
-
-        return DiscipleState.DISCIPLE_NONEXISTENT
-        
-    def exists(self):
-        return self.__exists
-    
-    def is_armed(self):
-        return self.__armed
-
-    def is_recording(self):
-        return self.__recording
-
-    def set_id(self, id):
-        self.__id = id
-
-    def set_exists(self, flag):
-        if flag:
-            self.__exists = True
-        else:
-            self.__exists = False
-            self.set_armed(False)
-            self.set_recording(False)
-            
-    def set_armed(self, flag):
-        if flag and self.exists():
-            self.__armed = True
-        elif flag and not self.exists():
-            raise IllegalStateException("Attempted to arm Disciple " +
-                    self.get_id() + ", but Disciple does not exist.")
-        else:
-            self.__armed = False
-            self.set_recording(False)
-
-    def set_recording(self, flag):
-        if flag and self.exists() and self.is_armed():
-            self.__recording = True
-        elif flag and self.exists() and not self.is_armed():
-            raise IllegalStateException(
-                    "Attempted to start recording on Disciple " +
-                    self.get_id() + ", but Disciple is not armed.")
-        elif flag and not self.exists():
-            raise IllegalStateException(
-                    "Attempted to start recording on Disciple " +
-                    self.get_id() + ", but Disciple does not exist.")
-        else:
-            self.__recording = False
-
-    def command_arm_on(self):
-        self.__command_arm = True
-    def command_arm_off(self):
-        self.__command_arm = False
-    def command_disarm_on(self):
-        self.__command_disarm = True
-    def command_disarm_off(self):
-        self.__command_disarm = True
-    def command_record_on(self):
-        self.__command_record = True
-    def command_record_off(self):
-        self.__command_record = False
-    def command_stop_recording_on(self):
-        self.__command_record = True
-    def command_stop_recording_off(self):
-        self.__command_record = False
-
-    def command_arm_status(self):
-        return self.__command_arm
-    def command_disarm_status(self):
-        return self.__command_disarm
-    def command_record_status(self):
-        return self.__command_record
-    def command_stop_recording_status(self):
-        return self.__command_stop_recording
-
 class Disciple:
     TIME_DELAY = 0.5 # seconds
 
@@ -219,6 +72,9 @@ class Disciple:
 
         # TODO: arm!
         self.__state.command_arm_off()
+        self.__hdpvr.open()
+        video_stream = open("/dev/" + HDPVR_DEVICE, "r")
+        video_file = open(video_file_name, "w")
 
         # wait for record signal
         while not self.__state.command_disarm_status():
