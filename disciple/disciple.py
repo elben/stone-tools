@@ -6,6 +6,7 @@ import sys
 import time
 import random
 import ConfigParser
+from discipleserver import *
 
 # parse config file
 config_file = "../config/config.conf"
@@ -17,7 +18,7 @@ configs.read(config_file)
 
 TEACHER_IP = configs.get("disciple", "teacher_ip")
 REMOTE_DIR = configs.get("disciple", "remote_dir")
-NFS_DIR = configs.get("disciple", "nfs_dir")
+VIDEO_DIR = configs.get("disciple", "video_dir")
 
 HDPVR_DEVICE = configs.get("disciple", "hdpvr_device")
 VIDEO_PREFIX = configs.get("disciple", "video_prefix")
@@ -84,17 +85,24 @@ class HDPVR:
     def get_device_name(self):
         return self.__device
 
+class IllegalStateException(Exception):
+    pass
+
 class DiscipleState:
     DISCIPLE_NONEXISTENT = 0
     DISCIPLE_EXISTS = 1
     DISCIPLE_EXISTS_ARMED = 2
     DISCIPLE_EXISTS_ARMED_RECORDING = 3
 
-    def __init__(self, exists = False, armed = False, recording = False):
+    def __init__(self, id = "", exists = False, armed = False, recording = False):
+        self.__id = id
         self.__exists = exists
         self.__armed = armed
         self.__recording = recording
     
+    def get_id(self):
+        return self.__id
+
     def current_state(self):
         if self.__exists and self.__armed and self.__recording:
             return DiscipleState.DISCIPLE_EXISTS_ARMED_RECORDING
@@ -114,17 +122,40 @@ class DiscipleState:
     def is_recording(self):
         return self.__recording
 
+    def set_id(self, id):
+        self.__id = id
+
     def set_exists(self, flag):
         if flag:
             self.__exists = True
         else:
-            if self.current_state() == DiscipleState.
             self.__exists = False
+            self.set_armed(False)
+            self.set_recording(False)
             
-    def set_armed(self):
-        pass
-    def set_recording(self):
-        pass
+    def set_armed(self, flag):
+        if flag and self.exists():
+            self.__armed = True
+        elif flag and not self.exists():
+            raise IllegalStateException("Attempted to arm Disciple " +
+                    self.get_id() + ", but Disciple does not exist.")
+        else:
+            self.__armed = False
+            self.set_recording(False)
+
+    def set_recording(self, flag):
+        if flag and self.exists() and self.is_armed():
+            self.__recording = True
+        elif flag and self.exists() and not self.is_armed():
+            raise IllegalStateException(
+                    "Attempted to start recording on Disciple " +
+                    self.get_id() + ", but Disciple is not armed.")
+        elif flag and not self.exists():
+            raise IllegalStateException(
+                    "Attempted to start recording on Disciple " +
+                    self.get_id() + ", but Disciple does not exist.")
+        else:
+            self.__recording = False
 
 class Disciple:
     def __init__(self, device, video_dir="/var/www",
@@ -134,8 +165,27 @@ class Disciple:
         self.__signals_dir = signals_dir
         self.__mac_addr = self.__get_mac_address()
 
+        self.__state = DiscipleState()
+        self.__server = DiscipleServerThread(self.__state)
+
+    def spawn_server(self):
+        # TODO: find a way to kill this beast
+        # probably no hope of doing this
+        if not self.__server.is_alive():
+            self.__server.run()
+
+    def run(self):
+        # /var/www/ exists? make if needed
+        if os.path.
+        # exists!
+        # wait for arm
+        # arm!
+        # wait for record
+        # record!
+        # wait for commands
+
+
     @staticmethod
-    # TODO: could be replaced w/ regex?
     def __get_mac_address():
         ifconfig = sp.Popen( ["ifconfig", "-a"], stdout = sp.PIPE )
         
@@ -145,6 +195,7 @@ class Disciple:
         if interfaces.count("HWaddr") < 1:
             return None
         
+        # TODO: could be replaced w/ regex?
         interfaces = interfaces.splitlines()
         for line in interfaces:
             if line.count( "HWaddr" ) > 0:
