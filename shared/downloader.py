@@ -3,7 +3,10 @@ import threading
 import os
 import time
 
-class FileSizesEqualException(Exception):
+class DownloadCompleteException(Exception):
+    pass
+
+class FileNotFoundException(Exception):
     pass
 
 class RemoteFile(object):
@@ -57,7 +60,7 @@ class RemoteFile(object):
         try:
             if self._response() is None:
                 return ''
-        except FileSizesEqualException, e:
+        except DownloadCompleteException, e:
             return ''
 
         return self._response().read( int(chunk_size) )
@@ -68,7 +71,7 @@ class RemoteFile(object):
         try:
             self._update()
             return self._response_obj
-        except FileSizesEqualException, e:
+        except DownloadCompleteException, e:
             raise e
 
     def _request(self):
@@ -100,7 +103,7 @@ class RemoteFile(object):
                 except urllib2.HTTPError, e:
                     # invalid range request caused by "finished" download
                     if str(e).count('416') > 0:
-                        raise FileSizesEqualException( 
+                        raise DownloadCompleteException( 
                             "Local size == remote size" )
                     else:
                         raise e
@@ -144,7 +147,7 @@ class RemoteFile(object):
         
         try:
             self._update()
-        except FileSizesEqualException, e:
+        except DownloadCompleteException, e:
             pass
         finally:
             # at least return the last size we found
@@ -192,9 +195,7 @@ class Downloader(object):
         Downloader is garbage collected or deleted.
         """
         
-        print "Downloader: __del__() has been called, calling 'self.stop()'"
         self.stop(kill = True)
-        print "Downloader: 'self.stop()' has returned"
     
     def start(self):
         """
@@ -226,18 +227,13 @@ class Downloader(object):
         
         # kill the thread if specified
         if kill:
-            print
-            print "Downloader: stop called with kill flag, kill set to True"
             self._thread_comm.set_kill(True)
             
             # block until the thread signals it's about to die
-            print "Downloader: waiting for thread's 'is_alive()' to return False"
             while self._thread.is_alive():
                 time.sleep(0.05)
             
-            print "Downloader: thread's 'is_alive()' returned False, setting kill to False"
             self._thread_comm.set_kill(False)
-            print "Downloader: kill sucessfully set, 'stop()' exiting"
     
     def get_download_rate(self):
         """Return the download rate in bytes per second."""
@@ -294,7 +290,6 @@ class DownloadThreadCommunicator(object):
         
         with self._kill_lock:
             self._kill = new_value
-            print "DownloadThreadCommunicator: kill set to " + str(new_value)
         
     def get_kill(self):
         """
@@ -380,7 +375,7 @@ class DownloadThread(threading.Thread):
                 with open(self._remote_file.get_local_path(), "ab") as f:
                     try:
                         f.write( self._remote_file.read() )
-                    except FileSizesEqualException, e:
+                    except DownloadCompleteException, e:
                         # we're 'finished' downloading, at least for now
                         pass
             else:
@@ -403,7 +398,6 @@ class DownloadThread(threading.Thread):
                     pass
             
             # die by exiting this 'run()' method
-            print "DownloadThread: kill recieved, terminating"
             return None
 
     def _calculate_download_rate(self):
