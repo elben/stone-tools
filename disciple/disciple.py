@@ -42,12 +42,11 @@ SIGNAL_FILES = [ EXIST_FILE,
 READ_SIZE = 1024 * 400 # 400Kb
 
 class Disciple:
-    TIME_DELAY = 0.5 # seconds
+    TIME_DELAY = 0.1 # seconds
 
     def __init__(self, device, video_dir="/var/www"):
         self.__hdpvr = HDPVR(device)
         self.__video_dir = video_dir
-        self.__signals_dir = signals_dir
         self.__mac_addr = self.__get_mac_address()
 
         self.__state = DiscipleState()
@@ -72,23 +71,31 @@ class Disciple:
 
         # TODO: arm!
         self.__state.command_arm_off()
-        self.__hdpvr.open()
-        video_stream = open("/dev/" + HDPVR_DEVICE, "r")
-        video_file = open(video_file_name, "w")
+        self.__hdpvr.open()     # don't forget to call __hdpvr.close()
+        video_file = open(self.get_video_path(), "wb")
 
         # wait for record signal
         while not self.__state.command_disarm_status():
-            time.sleep(Disciple.TIME_DELAY)
+            self.__hdpvr.read() # to read is to arm
 
-        # TODO: record!
+        
         self.__state.command_record_off()
 
         # wait for stop record signal
         while not self.__state.command_stop_recording_status():
             time.sleep(Disciple.TIME_DELAY)
 
+        
+        video_file.write(video_stream.read(READ_SIZE))
+        
+        # force the update of file attributes
+        video_file.flush()
+        os.fsync(video_file.fileno())
+        
+
         # TODO: stop recording!
         self.__state.command_stop_recording_off()
+        self.__hdpvr.close()
 
     @staticmethod
     def __get_mac_address():
@@ -119,24 +126,12 @@ class Disciple:
         # none of the mac addresses were valid
         return None
 
-    def send_signal(self, signal_prefix):
-        """
-        Write a signal file at signal directory.
-        scp 1.332.
-        """
-        # TODO: wrong; not done
-        path = os.path.join(self.get_signals_dir(), signal)
-        open(signal + self.get_mac_address(), "a").close()
-        "/path/to/nfs/signals/ARM_132423482309"
-
-    def get_signal(self):
-        return os.path.isfile(signal + mac_address)
+    def get_video_path(self, vid_prefix):
+        return os.path.join(self.get_video_dir(), vid_prefix +
+                self.get_mac_address())
 
     def get_video_dir(self):
         return self.__video_dir
-
-    def get_signals_dir(self):
-        return self.__signals_dir
 
     def get_mac_address(self):
         return self.__mac_addr
