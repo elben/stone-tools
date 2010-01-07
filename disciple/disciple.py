@@ -84,6 +84,67 @@ class HDPVR:
     def get_device_name(self):
         return self.__device
 
+class DiscipleState
+
+class Disciple:
+    def __init__(self, device, video_dir="/var/www",
+            signals_dir="/var/www/signals"):
+        self.__hdpvr = HDPVR(device)
+        self.__video_dir = video_dir
+        self.__signals_dir = signals_dir
+        self.__mac_addr = self.__get_mac_address()
+
+    @staticmethod
+    # TODO: could be replaced w/ regex?
+    def __get_mac_address():
+        ifconfig = sp.Popen( ["ifconfig", "-a"], stdout = sp.PIPE )
+        
+        interfaces = ifconfig.communicate()[0]
+        
+        # make sure we have at least one mac address to use
+        if interfaces.count("HWaddr") < 1:
+            return None
+        
+        interfaces = interfaces.splitlines()
+        for line in interfaces:
+            if line.count( "HWaddr" ) > 0:
+                mac_address = line.split("HWaddr ")
+                mac_address = mac_address[1] # the part after 'HWaddr '
+                mac_address = mac_address.replace(":", "") # remove colons
+                mac_address = mac_address.strip() # strip whitespace from ends
+                
+                # make sure we've got a real mac address
+                length = 12
+                if len(mac_address) != length: # length with colons removed
+                    continue
+                
+                return mac_address
+        
+        # none of the mac addresses were valid
+        return None
+
+    def send_signal(self, signal_prefix):
+        """
+        Write a signal file at signal directory.
+        scp 1.332.
+        """
+        # TODO: wrong; not done
+        path = os.path.join(self.get_signals_dir(), signal)
+        open(signal + self.get_mac_address(), "a").close()
+        "/path/to/nfs/signals/ARM_132423482309"
+
+    def get_signal(self):
+        return os.path.isfile(signal + mac_address)
+
+    def get_video_dir(self):
+        return self.__video_dir
+
+    def get_signals_dir(self):
+        return self.__signals_dir
+
+    def get_mac_address(self):
+        return self.__mac_addr
+
 def main():
     # flags
     removed_signal_files = False
@@ -199,38 +260,6 @@ def rm(file):
     elif os.path.isdir(file):
         os.rmdir(file)
 
-def send_signal(signal, mac_address):
-    open(signal + mac_address, "a").close()
-
-def get_signal(signal, mac_address):
-    return os.path.isfile(signal + mac_address)
-
-def get_mac_address():
-    ifconfig = sp.Popen( ["ifconfig", "-a"], stdout = sp.PIPE )
-    
-    interfaces = ifconfig.communicate()[0]
-    
-    # make sure we have at least one mac address to use
-    if interfaces.count("HWaddr") < 1:
-        return None
-    
-    interfaces = interfaces.splitlines()
-    for line in interfaces:
-        if line.count( "HWaddr" ) > 0:
-            mac_address = line.split("HWaddr ")
-            mac_address = mac_address[1] # the part after 'HWaddr '
-            mac_address = mac_address.replace(":", "") # remove colons
-            mac_address = mac_address.strip() # strip whitespace from ends
-            
-            # make sure we've got a real mac address
-            length = 12
-            if len(mac_address) != length: # length with colons removed
-                continue
-            
-            return mac_address
-    
-    # none of the mac addresses were valid
-    return None
 
 def hdpvr_device_exists(device):
     dev_dir = os.listdir("/dev")
