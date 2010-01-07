@@ -26,6 +26,11 @@ class DownloaderTest(unittest.TestCase):
         except:
             pass
         
+        try:
+            os.remove('invalid.txt')
+        except:
+            pass
+        
         self.rf1 = RemoteFile('http://elbenshira.com/d/testdl.txt')
         self.rf2 = RemoteFile('http://elbenshira.com/d/testdl2.txt')
         self.rf3 = RemoteFile('http://elbenshira.com/d/medical.txt')
