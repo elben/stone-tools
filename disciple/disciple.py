@@ -6,6 +6,7 @@ import sys
 import time
 import random
 import ConfigParser
+from libdisciple import *
 
 # parse config file
 config_file = "../config/config.conf"
@@ -17,7 +18,7 @@ configs.read(config_file)
 
 TEACHER_IP = configs.get("disciple", "teacher_ip")
 REMOTE_DIR = configs.get("disciple", "remote_dir")
-NFS_DIR = configs.get("disciple", "nfs_dir")
+VIDEO_DIR = configs.get("disciple", "video_dir")
 
 HDPVR_DEVICE = configs.get("disciple", "hdpvr_device")
 VIDEO_PREFIX = configs.get("disciple", "video_prefix")
@@ -40,62 +41,69 @@ SIGNAL_FILES = [ EXIST_FILE,
 # block size to read from the device
 READ_SIZE = 1024 * 400 # 400Kb
 
-class HDPVRException(Exception):
-    pass
-
-class HDPVR:
-    def __init__(self, device):
-        self.__device = str(device)    # full path to device
-        self.__stream = None
-
-    def open(self):
-        """
-        Opens streaming HDPVR device for reading.
-        Throws HDPVRException if failed to open.
-        """
-        if self.exists():
-            self.__stream = open(self.get_device_name(), "r")
-        else:
-            except HDPVRException("Could not open HDPVR device " +
-                    self.get_device_name() + ". Device does not exist.")
-
-    def close(self):
-        """
-        User must manually close HDPVR object.
-        """
-        if self.exists():
-            self.__stream.close()
-        else:
-            except HDPVRException("Could not close HDPVR device " +
-                    self.get_device_name() + ". Device does not exist.")
-
-    def read(self, bytes=1024*400):
-        if self.__stream is None:
-            except HDPVRException("HDPVR device " + self.get_device_name() +
-                    " not open.")
-        return self.__stream.read(bytes)
-
-    def exists(self):
-        """Returns True if OS detected HDPVR."""
-        if os.path.exists(self.get_device_name()):
-            return True
-        return False
-
-    def get_device_name(self):
-        return self.__device
-
-class DiscipleState
-
 class Disciple:
-    def __init__(self, device, video_dir="/var/www",
-            signals_dir="/var/www/signals"):
+    TIME_DELAY = 0.1 # seconds
+
+    def __init__(self, device, video_dir="/var/www", read_size = 1024*400):
         self.__hdpvr = HDPVR(device)
         self.__video_dir = video_dir
-        self.__signals_dir = signals_dir
         self.__mac_addr = self.__get_mac_address()
 
+        self.__state = DiscipleState()
+        self.__server = DiscipleServerThread(self.__state)
+        self.__read_size = read_size
+
+    def spawn_server(self):
+        # TODO: find a way to kill this beast
+        # probably no hope of doing this
+        if not self.__server.is_alive():
+            self.__server.run()
+
+    def run(self):
+        # create video dir if does not exist
+        if not os.path.isdir(self.get_video_dir()):
+            os.mkdir(self.get_video_dir())
+
+        self.__state.set_exists(True)
+
+        # wait for arm signal
+        while not self.__state.command_arm_status():
+            time.sleep(Disciple.TIME_DELAY)
+
+        # arm!
+        self.__state.command_arm_off()
+        self.__hdpvr.open()     # don't forget to call __hdpvr.close()
+
+        self.__state.set_armed(True)
+
+        # wait for record signal
+        while not self.__state.command_disarm_status():
+            self.__hdpvr.read() # to read is to arm
+
+        
+        self.__state.command_record_off()
+        video_file = open(self.get_video_path(), "wb")
+
+        self.__state.set_recording(True)
+
+        # wait for stop record signal
+        while not self.__state.command_stop_recording_status():
+            video_file.write(hdpvr.read(self.__read_size))
+        
+            # force the update of file attributes
+            video_file.flush()
+            os.fsync(video_file.fileno())
+
+        # stop recording!
+        self.__state.command_stop_recording_off()
+
+        self.__hdpvr.close()
+        video_file.close()
+
+        self.__state.set_armed(False)
+        self.__state.set_recording(False)
+
     @staticmethod
-    # TODO: could be replaced w/ regex?
     def __get_mac_address():
         ifconfig = sp.Popen( ["ifconfig", "-a"], stdout = sp.PIPE )
         
@@ -105,6 +113,7 @@ class Disciple:
         if interfaces.count("HWaddr") < 1:
             return None
         
+        # TODO: could be replaced w/ regex?
         interfaces = interfaces.splitlines()
         for line in interfaces:
             if line.count( "HWaddr" ) > 0:
@@ -123,24 +132,12 @@ class Disciple:
         # none of the mac addresses were valid
         return None
 
-    def send_signal(self, signal_prefix):
-        """
-        Write a signal file at signal directory.
-        scp 1.332.
-        """
-        # TODO: wrong; not done
-        path = os.path.join(self.get_signals_dir(), signal)
-        open(signal + self.get_mac_address(), "a").close()
-        "/path/to/nfs/signals/ARM_132423482309"
-
-    def get_signal(self):
-        return os.path.isfile(signal + mac_address)
+    def get_video_path(self, vid_prefix):
+        return os.path.join(self.get_video_dir(), vid_prefix +
+                self.get_mac_address())
 
     def get_video_dir(self):
         return self.__video_dir
-
-    def get_signals_dir(self):
-        return self.__signals_dir
 
     def get_mac_address(self):
         return self.__mac_addr
