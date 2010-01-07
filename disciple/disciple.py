@@ -44,13 +44,14 @@ READ_SIZE = 1024 * 400 # 400Kb
 class Disciple:
     TIME_DELAY = 0.1 # seconds
 
-    def __init__(self, device, video_dir="/var/www"):
+    def __init__(self, device, video_dir="/var/www", read_size = 1024*400):
         self.__hdpvr = HDPVR(device)
         self.__video_dir = video_dir
         self.__mac_addr = self.__get_mac_address()
 
         self.__state = DiscipleState()
         self.__server = DiscipleServerThread(self.__state)
+        self.__read_size = read_size
 
     def spawn_server(self):
         # TODO: find a way to kill this beast
@@ -69,10 +70,11 @@ class Disciple:
         while not self.__state.command_arm_status():
             time.sleep(Disciple.TIME_DELAY)
 
-        # TODO: arm!
+        # arm!
         self.__state.command_arm_off()
         self.__hdpvr.open()     # don't forget to call __hdpvr.close()
-        video_file = open(self.get_video_path(), "wb")
+
+        self.__state.set_armed(True)
 
         # wait for record signal
         while not self.__state.command_disarm_status():
@@ -80,22 +82,26 @@ class Disciple:
 
         
         self.__state.command_record_off()
+        video_file = open(self.get_video_path(), "wb")
+
+        self.__state.set_recording(True)
 
         # wait for stop record signal
         while not self.__state.command_stop_recording_status():
-            time.sleep(Disciple.TIME_DELAY)
+            video_file.write(hdpvr.read(self.__read_size))
+        
+            # force the update of file attributes
+            video_file.flush()
+            os.fsync(video_file.fileno())
 
-        
-        video_file.write(video_stream.read(READ_SIZE))
-        
-        # force the update of file attributes
-        video_file.flush()
-        os.fsync(video_file.fileno())
-        
-
-        # TODO: stop recording!
+        # stop recording!
         self.__state.command_stop_recording_off()
+
         self.__hdpvr.close()
+        video_file.close()
+
+        self.__state.set_armed(False)
+        self.__state.set_recording(False)
 
     @staticmethod
     def __get_mac_address():

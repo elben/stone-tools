@@ -135,6 +135,10 @@ class DiscipleState:
         if flag and self.exists():
             self.__armed = True
         elif flag and not self.exists():
+            # can't arm if we don't exist
+            return False
+        elif not flag and self.is_recording():
+            # can't disarm until we stop recording
             return False
         else:
             self.__armed = False
