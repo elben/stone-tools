@@ -99,7 +99,12 @@ class DiscipleState:
         self.__exists = exists
         self.__armed = armed
         self.__recording = recording
-    
+
+        self.__command_arm = False
+        self.__command_disarm = False
+        self.__command_record = False
+        self.__command_stop_recording = False
+
     def get_id(self):
         return self.__id
 
@@ -157,9 +162,36 @@ class DiscipleState:
         else:
             self.__recording = False
 
+    def command_arm_on(self):
+        self.__command_arm = True
+    def command_arm_off(self):
+        self.__command_arm = False
+    def command_disarm_on(self):
+        self.__command_disarm = True
+    def command_disarm_off(self):
+        self.__command_disarm = True
+    def command_record_on(self):
+        self.__command_record = True
+    def command_record_off(self):
+        self.__command_record = False
+    def command_stop_recording_on(self):
+        self.__command_record = True
+    def command_stop_recording_off(self):
+        self.__command_record = False
+
+    def command_arm_status(self):
+        return self.__command_arm
+    def command_disarm_status(self):
+        return self.__command_disarm
+    def command_record_status(self):
+        return self.__command_record
+    def command_stop_recording_status(self):
+        return self.__command_stop_recording
+
 class Disciple:
-    def __init__(self, device, video_dir="/var/www",
-            signals_dir="/var/www/signals"):
+    TIME_DELAY = 0.5 # seconds
+
+    def __init__(self, device, video_dir="/var/www"):
         self.__hdpvr = HDPVR(device)
         self.__video_dir = video_dir
         self.__signals_dir = signals_dir
@@ -175,15 +207,32 @@ class Disciple:
             self.__server.run()
 
     def run(self):
-        # /var/www/ exists? make if needed
-        if os.path.
-        # exists!
-        # wait for arm
-        # arm!
-        # wait for record
-        # record!
-        # wait for commands
+        # create video dir if does not exist
+        if not os.path.isdir(self.get_video_dir()):
+            os.mkdir(self.get_video_dir())
 
+        self.__state.set_exists(True)
+
+        # wait for arm signal
+        while not self.__state.command_arm_status():
+            time.sleep(Disciple.TIME_DELAY)
+
+        # TODO: arm!
+        self.__state.command_arm_off()
+
+        # wait for record signal
+        while not self.__state.command_disarm_status():
+            time.sleep(Disciple.TIME_DELAY)
+
+        # TODO: record!
+        self.__state.command_record_off()
+
+        # wait for stop record signal
+        while not self.__state.command_stop_recording_status():
+            time.sleep(Disciple.TIME_DELAY)
+
+        # TODO: stop recording!
+        self.__state.command_stop_recording_off()
 
     @staticmethod
     def __get_mac_address():
