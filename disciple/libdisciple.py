@@ -129,30 +129,26 @@ class DiscipleState:
             self.__exists = False
             self.set_armed(False)
             self.set_recording(False)
+        return True
             
     def set_armed(self, flag):
         if flag and self.exists():
             self.__armed = True
         elif flag and not self.exists():
-            raise IllegalStateException("Attempted to arm Disciple " +
-                    self.get_id() + ", but Disciple does not exist.")
+            return False
         else:
             self.__armed = False
             self.set_recording(False)
+        return True
 
     def set_recording(self, flag):
         if flag and self.exists() and self.is_armed():
             self.__recording = True
-        elif flag and self.exists() and not self.is_armed():
-            raise IllegalStateException(
-                    "Attempted to start recording on Disciple " +
-                    self.get_id() + ", but Disciple is not armed.")
-        elif flag and not self.exists():
-            raise IllegalStateException(
-                    "Attempted to start recording on Disciple " +
-                    self.get_id() + ", but Disciple does not exist.")
+        elif flag and not (self.exists() and self.is_armed()):
+            return False
         else:
             self.__recording = False
+        return True
 
     def command_arm_on(self):
         self.__command_arm = True
