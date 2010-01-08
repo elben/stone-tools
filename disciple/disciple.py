@@ -53,6 +53,9 @@ class Disciple:
         self.__server = DiscipleServerThread(self.__state)
         self.__read_size = read_size
 
+    def ds(self):
+        return self.__state
+
     def spawn_server(self):
         # TODO: find a way to kill this beast
         # probably no hope of doing this
@@ -64,30 +67,25 @@ class Disciple:
         if not os.path.isdir(self.get_video_dir()):
             os.mkdir(self.get_video_dir())
 
-        self.__state.set_exists(True)
+        self.ds().exist()
 
         # wait for arm signal
-        while not self.__state.command_arm_status():
+        while not self.ds().arming():
             time.sleep(Disciple.TIME_DELAY)
 
         # arm!
-        self.__state.command_arm_off()
         self.__hdpvr.open()     # don't forget to call __hdpvr.close()
-
-        self.__state.set_armed(True)
+        self.ds().cmd_armed()
 
         # wait for record signal
-        while not self.__state.command_disarm_status():
+        while not self.ds().recording():
             self.__hdpvr.read() # to read is to arm
 
-        
-        self.__state.command_record_off()
         video_file = open(self.get_video_path(), "wb")
-
-        self.__state.set_recording(True)
+        self.ds().cmd_recorded()
 
         # wait for stop record signal
-        while not self.__state.command_stop_recording_status():
+        while self.ds().recording():
             video_file.write(hdpvr.read(self.__read_size))
         
             # force the update of file attributes
@@ -95,13 +93,8 @@ class Disciple:
             os.fsync(video_file.fileno())
 
         # stop recording!
-        self.__state.command_stop_recording_off()
-
         self.__hdpvr.close()
         video_file.close()
-
-        self.__state.set_armed(False)
-        self.__state.set_recording(False)
 
     @staticmethod
     def __get_mac_address():
