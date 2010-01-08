@@ -81,6 +81,12 @@ class IllegalStateException(Exception):
     pass
 
 class DiscipleState:
+    """
+    DiscipleState used to communicate state of a disciple between the
+    disciple and Teacher.
+
+    Thread-safe (we hope).
+    """
 
     FALSE = 0
     MAYBE = 1
@@ -96,6 +102,8 @@ class DiscipleState:
         self.__exist_state = DiscipleState.FALSE
         self.__arm_state = DiscipleState.FALSE
         self.__record_state = DiscipleState.FALSE
+
+        self.__update_lock = threading.RLock()
 
     # get states
 
@@ -118,126 +126,61 @@ class DiscipleState:
     # send commands
 
     def cmd_exist(self):
-        self.__exist_state = DiscipleState.TRUE
+        with self.__update_lock:
+            self.__exist_state = DiscipleState.TRUE
+
     def cmd_unexist(self):
-        self.__exist_state = DiscipleState.FALSE
-        self.__arm_state = DiscipleState.FALSE
-        self.__record_state = DiscipleState.FALSE
+        with self.__update_lock:
+            self.__exist_state = DiscipleState.FALSE
+            self.__arm_state = DiscipleState.FALSE
+            self.__record_state = DiscipleState.FALSE
 
     def cmd_arm(self):
-        if self.exists()
-        self.__arm_state = DiscipleState.MAYBE
+        with self.__update_lock:
+            if self.exists():
+                self.__arm_state = DiscipleState.MAYBE
+                return True
+            else:
+                return False
+
     def cmd_armed(self):
-        self.__arm_state = DiscipleState.TRUE
+        with self.__update_lock:
+            if self.exists() and self.arming():
+                self.__arm_state = DiscipleState.TRUE
+                return True
+            else:
+                return False
+
     def cmd_disarm(self):
-        self.__arm_state = DiscipleState.FALSE
-        self.__record_state = DiscipleState.FALSE
+        with self.__update_lock:
+            if self.exists():
+                self.__arm_state = DiscipleState.FALSE
+                self.__record_state = DiscipleState.FALSE
+                return True
+            else:
+                return False
 
     def cmd_start_recording(self):
-        self.__record_state = DiscipleState.MAYBE
+        with self.__update_lock:
+            if self.exists() and self.armed():
+                self.__record_state = DiscipleState.MAYBE
+                return True
+            else:
+                return False
+
     def cmd_recording(self):
-        self.__record_state = DiscipleState.TRUE
+        with self.__update_lock:
+            if self.exists() and self.starting_recording():
+                self.__record_state = DiscipleState.TRUE
+                return True
+            else:
+                return False
+
     def cmd_stop_recording(self):
-        self.__record_state = DiscipleState.FALSE
-
-
-class DiscipleStateOld:
-    DISCIPLE_NONEXISTENT = 0
-    DISCIPLE_EXISTS = 1
-    DISCIPLE_EXISTS_ARMED = 2
-    DISCIPLE_EXISTS_ARMED_RECORDING = 3
-
-    def __init__(self, id = "", exists = False, armed = False, recording = False):
-        self.__id = id
-        self.__exists = exists
-        self.__armed = armed
-        self.__recording = recording
-
-        self.__command_arm = False
-        self.__command_disarm = False
-        self.__command_record = False
-        self.__command_stop_recording = False
-
-    def get_id(self):
-        return self.__id
-
-    def current_state(self):
-        if self.__exists and self.__armed and self.__recording:
-            return DiscipleState.DISCIPLE_EXISTS_ARMED_RECORDING
-        elif self.__exists and self.__armed:
-            return DiscipleState.DISCIPLE_EXISTS_ARMED
-        elif self.__exists:
-            return DiscipleState.DISCIPLE_EXISTS
-
-        return DiscipleState.DISCIPLE_NONEXISTENT
-        
-    def exists(self):
-        return self.__exists
-    
-    def is_armed(self):
-        return self.__armed
-
-    def is_recording(self):
-        return self.__recording
-
-    def set_id(self, id):
-        self.__id = id
-
-    def set_exists(self, flag):
-        if flag:
-            self.__exists = True
-        else:
-            self.__exists = False
-            self.set_armed(False)
-            self.set_recording(False)
-        return True
-            
-    def set_armed(self, flag):
-        if flag and self.exists():
-            self.__armed = True
-        elif flag and not self.exists():
-            # can't arm if we don't exist
-            return False
-        elif not flag and self.is_recording():
-            # can't disarm until we stop recording
-            return False
-        else:
-            self.__armed = False
-            self.set_recording(False)
-        return True
-
-    def set_recording(self, flag):
-        if flag and self.exists() and self.is_armed():
-            self.__recording = True
-        elif flag and not (self.exists() and self.is_armed()):
-            return False
-        else:
-            self.__recording = False
-        return True
-
-    def command_arm_on(self):
-        self.__command_arm = True
-    def command_arm_off(self):
-        self.__command_arm = False
-    def command_disarm_on(self):
-        self.__command_disarm = True
-    def command_disarm_off(self):
-        self.__command_disarm = True
-    def command_record_on(self):
-        self.__command_record = True
-    def command_record_off(self):
-        self.__command_record = False
-    def command_stop_recording_on(self):
-        self.__command_record = True
-    def command_stop_recording_off(self):
-        self.__command_record = False
-
-    def command_arm_status(self):
-        return self.__command_arm
-    def command_disarm_status(self):
-        return self.__command_disarm
-    def command_record_status(self):
-        return self.__command_record
-    def command_stop_recording_status(self):
-        return self.__command_stop_recording
+        with self.__update_lock:
+            if self.exists() and self.armed():
+                self.__record_state = DiscipleState.FALSE
+                return True
+            else:
+                return False
 
