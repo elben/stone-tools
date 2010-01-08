@@ -81,6 +81,63 @@ class IllegalStateException(Exception):
     pass
 
 class DiscipleState:
+
+    FALSE = 0
+    MAYBE = 1
+    TRUE = 2
+    
+    def __init__(self, key_disciple='', key_teacher=''):
+        # key idea: to prevent disciple and teacher from doing illegal
+        # activities, we force them to pass in a key for every method call,
+        # and we make sure that it is a legal call
+        self.__key_disciple = key_disciple
+        self.__key_teacher = key_teacher
+
+        self.__exist_state = DiscipleState.FALSE
+        self.__arm_state = DiscipleState.FALSE
+        self.__record_state = DiscipleState.FALSE
+
+    # get states
+
+    def exists(self):
+        return self.__exist_state
+    def disarmed(self):
+        return self.__arm_state == DiscipleState.FALSE
+    def arming(self):
+        return self.__arm_state == DiscipleState.MAYBE
+    def armed(self):
+        return self.__arm_state == DiscipleState.TRUE
+
+    def not_recording(self):
+        return self.__record_state == DiscipleState.FALSE
+    def starting_recording(self):
+        return self.__record_state == DiscipleState.MAYBE
+    def recording(self):
+        return self.__record_state == DiscipleState.TRUE
+
+    # send commands
+
+    def cmd_exist(self):
+        pass
+    def cmd_unexist(self):
+        pass
+
+    def cmd_arm(self):
+        pass
+    def cmd_armed(self):
+        pass
+    def cmd_disarm(self):
+        pass
+
+    def cmd_start_recording(self):
+        pass
+    def cmd_recording(self):
+        pass
+    def cmd_stop_recording(self):
+        pass
+
+
+class DiscipleStateOld:
     DISCIPLE_NONEXISTENT = 0
     DISCIPLE_EXISTS = 1
     DISCIPLE_EXISTS_ARMED = 2
