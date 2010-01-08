@@ -118,7 +118,7 @@ class DiscipleState:
     # send commands
 
     def cmd_exist(self):
-        pass
+        self.__exist_state = DiscipleState.TRUE
     def cmd_unexist(self):
         pass
 
