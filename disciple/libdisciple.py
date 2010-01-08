@@ -100,7 +100,7 @@ class DiscipleState:
     # get states
 
     def exists(self):
-        return self.__exist_state
+        return self.__exist_state == DiscipleState.TRUE
     def disarmed(self):
         return self.__arm_state == DiscipleState.FALSE
     def arming(self):
@@ -120,21 +120,25 @@ class DiscipleState:
     def cmd_exist(self):
         self.__exist_state = DiscipleState.TRUE
     def cmd_unexist(self):
-        pass
+        self.__exist_state = DiscipleState.FALSE
+        self.__arm_state = DiscipleState.FALSE
+        self.__record_state = DiscipleState.FALSE
 
     def cmd_arm(self):
-        pass
+        if self.exists()
+        self.__arm_state = DiscipleState.MAYBE
     def cmd_armed(self):
-        pass
+        self.__arm_state = DiscipleState.TRUE
     def cmd_disarm(self):
-        pass
+        self.__arm_state = DiscipleState.FALSE
+        self.__record_state = DiscipleState.FALSE
 
     def cmd_start_recording(self):
-        pass
+        self.__record_state = DiscipleState.MAYBE
     def cmd_recording(self):
-        pass
+        self.__record_state = DiscipleState.TRUE
     def cmd_stop_recording(self):
-        pass
+        self.__record_state = DiscipleState.FALSE
 
 
 class DiscipleStateOld:
