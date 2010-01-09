@@ -41,17 +41,27 @@ SIGNAL_FILES = [ EXIST_FILE,
 # block size to read from the device
 READ_SIZE = 1024 * 400 # 400Kb
 
+def main():
+    d = Disciple(HDPVR_DEVICE, VIDEO_DIR, READSIZE)
+    d.spawn_server()
+    d.run()
+
 class Disciple:
     TIME_DELAY = 0.1 # seconds
 
-    def __init__(self, device, video_dir="/var/www", read_size = 1024*400):
+    def __init__(self, device="/dev/video0", video_dir="/var/www", read_size = 1024*400):
         self.__hdpvr = HDPVR(device)
         self.__video_dir = video_dir
-        self.__mac_addr = self.__get_mac_address()
 
         self.__state = DiscipleState()
         self.__server = DiscipleServerThread(self.__state)
         self.__read_size = read_size
+
+        mac_addr = Disciple.__get_mac_address()
+        if mac_addr is None:
+            # use a random number, yeah!
+            mac_addr= str( random.uniform(100000000000, 999999999999) )
+        self.__mac_addr = mac_addr 
 
     def ds(self):
         return self.__state
@@ -60,7 +70,7 @@ class Disciple:
         # TODO: find a way to kill this beast
         # probably no hope of doing this
         if not self.__server.is_alive():
-            self.__server.run()
+            self.__server.start()
 
     def run(self):
         """
@@ -148,7 +158,7 @@ class Disciple:
     def get_mac_address(self):
         return self.__mac_addr
 
-def main():
+def main_old():
     # flags
     removed_signal_files = False
     
