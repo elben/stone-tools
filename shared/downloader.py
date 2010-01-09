@@ -2,22 +2,20 @@ import urllib2
 import threading
 import os
 import time
-
+ 
 class DownloadCompleteException(Exception):
     pass
-
+ 
 class FileNotFoundException(Exception):
     pass
-
+ 
 class RemoteFile(object):
     """
     Creates a connection with a remote file via HTTP. RemoteFile reads data
     from a remote location. Ignores already-read data. Works with
     increasing remote file sizes.
     
-    Use RemoteFile through Downloader.
-    
-    Thread-safe.
+    Use RemoteFile through Downloader. Thread-safe.
     """
     
     def __init__(self, remote_url, local_dir = "", local_file = None):
@@ -29,8 +27,8 @@ class RemoteFile(object):
         local_file: name file will be saved as
         """
         
-        # used for locking the __update method and such, since multiple threads
-        # will be calling this (possibly) simultaneously
+        # used for locking the __update method and such, since multiple
+        # threads will be calling this (possibly) simultaneously
         self._update_lock = threading.RLock()
         
         self._remote_url = remote_url
@@ -62,9 +60,23 @@ class RemoteFile(object):
                 return ''
         except DownloadCompleteException, e:
             return ''
-
-        return self._response().read( int(chunk_size) )
-
+        except FileNotFoundException, e:
+            # throw it up the chain of command
+            raise e
+        except Exception, e:
+            # make it obvious so we can deal with whatever this is :(
+            for x in xrange(10):
+                print "!"            
+ 
+            # find the rest we will have missed
+            raise e
+        
+        try:
+            return self._response().read( int(chunk_size) )
+        except:
+            # we already dealt with any errors we needed to
+            return ''
+ 
     def _response(self):
         """Makes sure the response is up to date before returning it."""
         
@@ -72,19 +84,30 @@ class RemoteFile(object):
             self._update()
             return self._response_obj
         except DownloadCompleteException, e:
+            # don't care if the files sizes are the same, return the response
+            return self._response_obj
+        except FileNotFoundException, e:
             raise e
-
+        except Exception, e:
+            # make it obvious so we can deal with whatever this is :(
+            for x in xrange(10):
+                print "!"            
+ 
+            raise e
+ 
     def _request(self):
-        """Makes sure the request object is up to date before returning it."""
+        """
+        Makes sure the request object is up to date before returning it.
+        """
         
         # http://en.wikipedia.org/wiki/List_of_HTTP_headers
         request = urllib2.Request( self.get_remote_url() )
         
         # NOTE: Range header endpoints are inclusive. i.e. 0-1 gives 2 bytes
-        request.add_header( "Range", "bytes=%s-" % (str(self.get_local_size())) )
+        request.add_header("Range", "bytes=%s-" % (str(self.get_local_size())))
         
         return request
-
+ 
     def _update(self):
         """
         Connect to the remote URL, get a new response object, and update
@@ -117,7 +140,7 @@ class RemoteFile(object):
                     self._remote_size = rsize
                 elif info.has_key("Content-Length"):
                     # we did not specify range
-                    self._remote_size = int(info.get("Content-Length"))
+                    self._remote_size = int( info.get("Content-Length") )
     
                 # whatever Exception object we caught will be raise so we 
                 # how to deal with it in the future.
@@ -136,10 +159,11 @@ class RemoteFile(object):
         from 0.0 to 1.0.
         """
         
-        remote_size = self.get_remote_size()
-        if remote_size > 0:
-            return float( self.get_local_size() ) / remote_size
+        if self._remote_size > 0:
+            return float( self.get_local_size() ) / self._remote_size
         else:
+            # return 'complete' if there's nothing to download since '0.0'
+            # might just look like nothing happened
             return 1.0
     
     def get_remote_size(self):
@@ -148,10 +172,16 @@ class RemoteFile(object):
         try:
             self._update()
         except DownloadCompleteException, e:
-            pass
-        finally:
             # at least return the last size we found
             return self._remote_size
+        except FileNotFoundException, e:
+            raise e
+        except Exception, e:
+            # make it obvious so we can deal with whatever this is :(
+            for x in xrange(10):
+                print "!"
+            
+            raise e
     
     def get_local_path(self):
         """Returns the local file path including file name."""
@@ -173,11 +203,12 @@ class RemoteFile(object):
     
     def _enough_delay(self, prev_time, min_gap):
         """
-        Returns True if the given time has passed since the given previous time.
+        Returns True if the given time has passed since the given
+        previous time.
         """
         
         return time.time() - prev_time >= min_gap
-
+ 
 class Downloader(object):
     def __init__(self, remote_url, local_dir = "", local_file = None,
                  redownload = False):
@@ -191,11 +222,13 @@ class Downloader(object):
     
     def __del__(self):
         """
-        Kill and remove the thread we spawned as soon as this
-        Downloader is garbage collected or deleted.
+        Kill and remove the thread we spawned as soon as this Downloader
+        is garbage collected or deleted.
         """
         
+        #print "Downloader: __del__ method was called"
         self.stop(kill = True)
+        #print "Downloader: __del__ method finished"
     
     def start(self):
         """
@@ -203,6 +236,8 @@ class Downloader(object):
         Will recreate the thread if it has been killed by 'stop()'.
         """
         
+        #print "Downloader: start method called"
+ 
         # (re)create the thread if it was killed
         if not self._thread.is_alive():
             self._thread_comm = DownloadThreadCommunicator()
@@ -218,6 +253,8 @@ class Downloader(object):
         Has no effect if the download is already stopped.
         """
         
+        #print "Downloader: stop method called"
+ 
         # don't bother doing any work if the thread is already dead
         if not self._thread.is_alive():
             return
@@ -227,12 +264,15 @@ class Downloader(object):
         
         # kill the thread if specified
         if kill:
+            #print "Downloader: calling set_kill on DownloadThreadCommunicator"
             self._thread_comm.set_kill(True)
             
-            # block until the thread signals it's about to die
+            # block until the thread is dead
+            #print "Downloader: waiting for DownloadThread to die"
             while self._thread.is_alive():
-                time.sleep(0.05)
+                time.sleep(0.001)
             
+            #print "Downloader: calling set_kill on DownloadThreadCommunicator"
             self._thread_comm.set_kill(False)
     
     def get_download_rate(self):
@@ -264,13 +304,13 @@ class Downloader(object):
         """Return the remote URL we are downloading from."""
         
         return self._remote_file.get_remote_url()
-
+ 
 class DownloadThreadCommunicator(object):
     """
-    Used as a communication interface between Downloader and DownloadThread.
-    The threads use the 'get' and 'set' methods to perform the respecive
-    actions on data in this object.
-
+    Used as a communication interface between Downloader and
+    DownloadThread. The threads use the 'get' and 'set' methods to
+    perform the respecive actions on data in this object.
+ 
     Data is shared, but protected.  There are no race conditions.
     """
     
@@ -280,7 +320,7 @@ class DownloadThreadCommunicator(object):
         self._downloading_lock = threading.RLock()
         self._download_rate_lock = threading.RLock()
         self._kill_lock = threading.RLock()
-
+ 
         self._download_rate = 0.0
         self._downloading = False
         self._kill = False
@@ -288,6 +328,7 @@ class DownloadThreadCommunicator(object):
     def set_kill(self, new_value):
         """Tell the download thread to terminate."""
         
+        #print "DownloadThreadCommunicator: setting kill to", new_value
         with self._kill_lock:
             self._kill = new_value
         
@@ -299,16 +340,13 @@ class DownloadThreadCommunicator(object):
         return self._kill
         
     def get_downloading(self):
-        """
-        Return the boolean status of the downloading variable.
-        """
+        """Return the boolean status of the downloading variable."""
         
         return self._downloading
     
     def set_downloading(self, new_value):
         """
-        Set the boolean status of the downloading variable.
-        Thread-safe.
+        Set the boolean status of the downloading variable. Thread-safe.
         """
         
         with self._downloading_lock:
@@ -320,9 +358,7 @@ class DownloadThreadCommunicator(object):
         return self._download_rate
     
     def set_download_rate(self, rate):
-        """
-        Set the download rate.  Thread-safe.
-        """
+        """Set the download rate.  Thread-safe."""
         
         with self._download_rate_lock:
             self._download_rate = rate
@@ -345,7 +381,7 @@ class DownloadThread(threading.Thread):
         
         # the communicator object we will transmit our status through
         self._thread_comm = comm
-
+ 
         # variables for download rate calculation
         self._calc_interval = 0.5 # time between rate calculations
         time_interval = 2.0 # interval over which we calculate rate
@@ -355,8 +391,8 @@ class DownloadThread(threading.Thread):
         # average rate. fill with 0.0s so we can just queue/dequeue as needed.
         # we multiply by length of the queue of file sizes, which must be at 
         # least 1 to prevent divide-by-zero errors in rate calculation.
-        self._rate_list = [0.0] * max(1, int(time_interval / self._calc_interval))
-
+        self._rate_list = [0.0]*max(1, int(time_interval/self._calc_interval))
+ 
         # make sure the local file exists by 'touch'-ing it
         open(self._remote_file.get_local_path(), "ab").close()
             
@@ -385,7 +421,7 @@ class DownloadThread(threading.Thread):
                 
                 # anti-spin precautions
                 time.sleep(0.1)
-
+ 
             # update the download rate
             self._calculate_download_rate()
         else:
@@ -398,12 +434,13 @@ class DownloadThread(threading.Thread):
                     pass
             
             # die by exiting this 'run()' method
-            return None
-
+            #print "DownloadThread: terminating"
+            return
+ 
     def _calculate_download_rate(self):
         """
-        Return the current rate of the download.  Will only
-        calculate as frequently as has been specified.
+        Return the current rate of the download.  Will only calculate as
+        frequently as has been specified.
         """
         
         if self._enough_delay(self._prev_time_update, self._calc_interval):
@@ -421,10 +458,11 @@ class DownloadThread(threading.Thread):
             # change the comm's rate to the average rate over our interval
             ave = lambda lst: float( sum(lst) ) / len(lst)
             self._thread_comm.set_download_rate( ave(self._rate_list) )
-
+ 
     def _enough_delay(self, prev_time, min_gap):
         """
-        Returns True if the given time has passed since the given previous time.
+        Returns True if the given time has passed since the given previous
+        time.
         """
         
         return time.time() - prev_time >= min_gap
