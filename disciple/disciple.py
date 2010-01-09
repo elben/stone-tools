@@ -63,38 +63,51 @@ class Disciple:
             self.__server.run()
 
     def run(self):
+        """
+        Start the disciple-teacher loop of arming and recording video.
+        Blocking; method never returns.
+
+        TODO: perhaps thread this so we can stop if we want to.
+        """
         # create video dir if does not exist
         if not os.path.isdir(self.get_video_dir()):
             os.mkdir(self.get_video_dir())
 
-        self.ds().exist()
+        self.ds().cmd_exist()
 
-        # wait for arm signal
-        while not self.ds().arming():
-            time.sleep(Disciple.TIME_DELAY)
+        # TODO: perhaps make this unblocking. Right now, there is no nice
+        # way of killing run. Only disciple can call cmd_unexist(), so if
+        # disciple is stuck in this loop, then it won't ever call
+        # cmd_unexist.
+        # while self.ds().exists():
+        while True:
+            # wait for arm signal
+            while not self.ds().arming():
+                time.sleep(Disciple.TIME_DELAY)
 
-        # arm!
-        self.__hdpvr.open()     # don't forget to call __hdpvr.close()
-        self.ds().cmd_armed()
+            # arm!
+            self.__hdpvr.open()     # don't forget to call __hdpvr.close()
+            self.ds().cmd_armed()
 
-        # wait for record signal
-        while not self.ds().recording():
-            self.__hdpvr.read() # to read is to arm
+            # wait for record signal
+            while not self.ds().recording():
+                self.__hdpvr.read() # to read is to arm
 
-        video_file = open(self.get_video_path(), "wb")
-        self.ds().cmd_recorded()
+            video_file = open(self.get_video_path(), "wb")
+            self.ds().cmd_recorded()
 
-        # wait for stop record signal
-        while self.ds().recording():
-            video_file.write(hdpvr.read(self.__read_size))
-        
-            # force the update of file attributes
-            video_file.flush()
-            os.fsync(video_file.fileno())
+            # wait for stop record signal
+            while not self.ds().stopping_recording():
+                video_file.write(hdpvr.read(self.__read_size))
+            
+                # force the update of file attributes
+                video_file.flush()
+                os.fsync(video_file.fileno())
 
-        # stop recording!
-        self.__hdpvr.close()
-        video_file.close()
+            # stop recording!
+            self.__hdpvr.close()
+            video_file.close()
+            self.ds().cmd_stopped_recording()
 
     @staticmethod
     def __get_mac_address():

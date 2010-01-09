@@ -139,6 +139,11 @@ class DiscipleState:
             self.__exist_state = DiscipleState.ON
 
     def cmd_unexist(self):
+        """
+        Only call if disciple is about to die. Assume everything failed, so
+        we assume that we are no longer armed or recording. That is, we
+        bypass the ON_OFF state.
+        """
         with self.__update_lock:
             self.__exist_state = DiscipleState.OFF
             self.__arm_state = DiscipleState.OFF
