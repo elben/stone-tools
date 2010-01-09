@@ -88,9 +88,14 @@ class DiscipleState:
     Thread-safe (we hope).
     """
 
-    FALSE = 0
-    MAYBE = 1
-    TRUE = 2
+    # Consts to represent where a state is at.
+    # For example, a disciple's 'recording' state can be in four different
+    # states: OFF = not recording, OFF_ON = starting up recording, ON =
+    # recording, ON_OFF = stopping recording
+    OFF = 0
+    OFF_ON = 1      # intermediate state when turning on
+    ON = 2
+    ON_OFF = 3      # intermediate state 
     
     def __init__(self, key_disciple='', key_teacher=''):
         # key idea: to prevent disciple and teacher from doing illegal
@@ -99,46 +104,50 @@ class DiscipleState:
         self.__key_disciple = key_disciple
         self.__key_teacher = key_teacher
 
-        self.__exist_state = DiscipleState.FALSE
-        self.__arm_state = DiscipleState.FALSE
-        self.__record_state = DiscipleState.FALSE
+        self.__exist_state = DiscipleState.OFF
+        self.__arm_state = DiscipleState.OFF
+        self.__record_state = DiscipleState.OFF
 
         self.__update_lock = threading.RLock()
 
     # get states
 
     def exists(self):
-        return self.__exist_state == DiscipleState.TRUE
+        return self.__exist_state == DiscipleState.ON
     def disarmed(self):
-        return self.__arm_state == DiscipleState.FALSE
+        return self.__arm_state == DiscipleState.OFF
     def arming(self):
-        return self.__arm_state == DiscipleState.MAYBE
+        return self.__arm_state == DiscipleState.OFF_ON
     def armed(self):
-        return self.__arm_state == DiscipleState.TRUE
+        return self.__arm_state == DiscipleState.ON
+    def disarming(self):
+        return self.__arm_state = DiscipleState.ON_OFF
 
     def not_recording(self):
-        return self.__record_state == DiscipleState.FALSE
+        return self.__record_state == DiscipleState.OFF
     def starting_recording(self):
-        return self.__record_state == DiscipleState.MAYBE
+        return self.__record_state == DiscipleState.OFF_ON
     def recording(self):
-        return self.__record_state == DiscipleState.TRUE
+        return self.__record_state == DiscipleState.ON
+    def stopping_recording(self):
+        return self.__record_state = DiscipleState.ON_OFF
 
     # send commands
 
     def cmd_exist(self):
         with self.__update_lock:
-            self.__exist_state = DiscipleState.TRUE
+            self.__exist_state = DiscipleState.ON
 
     def cmd_unexist(self):
         with self.__update_lock:
-            self.__exist_state = DiscipleState.FALSE
-            self.__arm_state = DiscipleState.FALSE
-            self.__record_state = DiscipleState.FALSE
+            self.__exist_state = DiscipleState.OFF
+            self.__arm_state = DiscipleState.OFF
+            self.__record_state = DiscipleState.OFF
 
     def cmd_arm(self):
         with self.__update_lock:
             if self.exists():
-                self.__arm_state = DiscipleState.MAYBE
+                self.__arm_state = DiscipleState.OFF_ON
                 return True
             else:
                 return False
@@ -146,7 +155,7 @@ class DiscipleState:
     def cmd_armed(self):
         with self.__update_lock:
             if self.exists() and self.arming():
-                self.__arm_state = DiscipleState.TRUE
+                self.__arm_state = DiscipleState.ON
                 return True
             else:
                 return False
@@ -154,8 +163,17 @@ class DiscipleState:
     def cmd_disarm(self):
         with self.__update_lock:
             if self.exists():
-                self.__arm_state = DiscipleState.FALSE
-                self.__record_state = DiscipleState.FALSE
+                self.__arm_state = DiscipleState.ON_OFF
+                self.cmd_stop_recording()
+                return True
+            else:
+                return False
+
+    def cmd_disarmed(self):
+        with self.__update_lock:
+            if self.exists():
+                self.__arm_state = DiscipleState.OFF
+                self.__record_state = DiscipleState.OFF
                 return True
             else:
                 return False
@@ -163,7 +181,7 @@ class DiscipleState:
     def cmd_start_recording(self):
         with self.__update_lock:
             if self.exists() and self.armed():
-                self.__record_state = DiscipleState.MAYBE
+                self.__record_state = DiscipleState.OFF_ON
                 return True
             else:
                 return False
@@ -171,7 +189,7 @@ class DiscipleState:
     def cmd_recording(self):
         with self.__update_lock:
             if self.exists() and self.starting_recording():
-                self.__record_state = DiscipleState.TRUE
+                self.__record_state = DiscipleState.ON
                 return True
             else:
                 return False
@@ -179,8 +197,15 @@ class DiscipleState:
     def cmd_stop_recording(self):
         with self.__update_lock:
             if self.exists() and self.armed():
-                self.__record_state = DiscipleState.FALSE
+                self.__record_state = DiscipleState.ON_OFF
                 return True
             else:
                 return False
 
+    def cmd_stopped_recording(self):
+        with self.__update_lock:
+            if self.exists() and self.armed():
+                self.__record_state = DiscipleState.OFF
+                return True
+            else:
+                return False
