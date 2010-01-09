@@ -37,6 +37,21 @@ class HDPVRException(Exception):
     pass
 
 class HDPVR:
+    """
+    Emulates a file object for an HDPVR device.
+
+    Sample usage:
+        
+        hdpvr = HDPVR(device = "/dev/video0")
+        while not hdpvr.exists():
+            time.sleep(0.1)
+        hdpvr.open()
+
+        while True:
+            data = hdpvr.read(bytes)
+        hdpvr.close()
+
+    """
     def __init__(self, device):
         self.__device = str(device)    # full path to device
         self.__stream = None

@@ -83,6 +83,9 @@ class Disciple:
         if not os.path.isdir(self.get_video_dir()):
             os.mkdir(self.get_video_dir())
 
+        while not self.__hdpvr.exists():
+            # TODO: timeout before quitting?
+            time.sleep(TIME_DELAY)
         self.ds().cmd_exist()
 
         # TODO: perhaps make this unblocking. Right now, there is no nice
@@ -265,40 +268,6 @@ def main_old():
         
         print "Done recording!"
         print
-
-def rm(file):
-    """Remove a file or directory, as long as it exists"""
-    if os.path.isfile(file) or os.path.islink(file):
-        os.remove(file)
-    elif os.path.isdir(file):
-        os.rmdir(file)
-
-
-def hdpvr_device_exists(device):
-    dev_dir = os.listdir("/dev")
-    
-    if str(device) in dev_dir:
-        return True
-    return False
-
-def nfs_mounted(ip):
-    with open("/proc/mounts") as file:
-        mounts = file.read()
-    
-    if mounts.count( str(ip) ) > 0:
-        return True
-    return False
-
-def example_hdpvr():
-    hdpvr = HDPVR("/dev/video0")
-    while not hdpvr.exists():
-        time.sleep(0.1)
-    hdpvr.open()
-
-    while get_data:
-        data = hdpvr.read(bytes)
-        # append data into /var/www/video.ts
-    hdpvr.close()
 
 if __name__ == "__main__":
     main()
