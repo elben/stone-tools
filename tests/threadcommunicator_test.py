@@ -6,7 +6,7 @@ import threading
 class DownloaderTest(unittest.TestCase):
 
     def setUp(self):
-        self.tc = ThreadCommunicator()
+        self.tc = DownloadThreadCommunicator()
 
     def tearDown(self):
         pass
@@ -36,4 +36,5 @@ class DownloaderTest(unittest.TestCase):
         self.assertEqual(self.tc.get_downloading(), False)
 
 if __name__ == '__main__':
-    unittest.main()
+    suite = unittest.TestLoader().loadTestsFromTestCase(DownloaderTest)
+    unittest.TextTestRunner(verbosity=2).run(suite)

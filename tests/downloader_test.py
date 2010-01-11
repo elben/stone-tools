@@ -6,7 +6,7 @@ class DownloaderTest(unittest.TestCase):
     def setUp(self):
         # make sure these files don't stay in this directory
         delete_these = [ 'testdl.txt', 'testdl2.txt', 'medical.txt', 
-                         'empty.txt', 'medicallink' ]
+                         'empty.txt', 'nonexistent.txt' ]
         for f in delete_these:
             try:
                 os.remove(f)
@@ -17,7 +17,7 @@ class DownloaderTest(unittest.TestCase):
         self.d2 = Downloader('http://elbenshira.com/d/testdl2.txt')
         self.d3 = Downloader('http://elbenshira.com/d/medical.txt')
         self.d4 = Downloader('http://elbenshira.com/d/empty.txt')
-        self.d5 = Downloader('http://elbenshira.com/d/medicallink')
+        self.d5 = Downloader('http://elbenshira.com/d/nonexistent.txt')
  
     def tearDown(self):
         # make sure these files don't stay in this directory
@@ -29,18 +29,18 @@ class DownloaderTest(unittest.TestCase):
             except:
                 pass
         
-        # kill all the threads
-        self.d1.stop(True)
-        self.d2.stop(True)
-        self.d3.stop(True)
-        self.d4.stop(True)
-        self.d5.stop(True)
+        # kill all the Downloaders and their threads
+        del self.d1
+        del self.d2
+        del self.d3
+        del self.d4
+        del self.d5
         
     def test_download1(self):
         self.d1.start()
         
-        while self.d1.get_progress() < 1.0:
-            time.sleep(0.001)
+        while not self.d1.is_complete():
+            time.sleep(0.01)
         
         self.d1.stop()
             
@@ -57,7 +57,7 @@ class DownloaderTest(unittest.TestCase):
     def test_download2(self):
         self.d2.start()
         
-        while self.d2.get_progress() < 1.0:
+        while not self.d2.is_complete():
             time.sleep(0.01)
         
         self.d2.stop()
@@ -73,7 +73,7 @@ class DownloaderTest(unittest.TestCase):
     def test_download3(self):
         self.d3.start()
         
-        while self.d3.get_progress() < 1.0:
+        while not self.d3.is_complete():
             time.sleep(0.01)
         
         self.d3.stop()
@@ -87,12 +87,12 @@ class DownloaderTest(unittest.TestCase):
     def test_download4(self):
         self.d4.start()
         
-        while self.d4.get_progress() < 1.0:
+        while not self.d4.is_complete():
             time.sleep(0.01)
         
         self.d4.stop()
             
-        data = ""
+        data = None # something we're not asserting for
         with open(self.d4.get_local_path()) as f:
             data = f.read()
         
@@ -101,29 +101,39 @@ class DownloaderTest(unittest.TestCase):
     def test_download5(self):
         self.d5.start()
         
-        while self.d5.get_progress() < 1.0:
+        while not self.d5.is_complete():
             time.sleep(0.01)
         
         self.d5.stop()
             
-        data = ""
+        data = None # something that's not what we're asserting for
         with open(self.d5.get_local_path()) as f:
             data = f.read()
         
-        self.assert_(len(data) == 2490041)
+        self.assert_(data == "")
+    
+    def test_downloader_thread_kill(self):
+        pass
+    
+    def test_downloader_thread_no_kill(self):
+        pass
     
     def test_download_rate(self):
         # only tests whether it returns a float, can't think of a
         # reliable way to test whether it calculates the rate
         # correctly
         
-        self.d2.start()
+        self.d3.start()
         
-        rate = self.d2.get_download_rate()
+        # wait for the download to get going so we can check it
+        while self.d3.get_progress() == 0.0:
+            time.sleep(0.01)
         
-        self.assert_( type(rate) is type(0.0) )
+        rate = self.d3.get_download_rate()
         
-        self.d2.stop()
+        self.assert_( type(rate) is type(0.0) and rate > 0.0)
+        
+        self.d3.stop()
  
     def test_download_resume(self):
         self.d3.start()
@@ -132,7 +142,7 @@ class DownloaderTest(unittest.TestCase):
         time.sleep(0.01)
         self.d3.start()
         
-        while self.d3.get_progress() < 1.0:
+        while not self.d3.is_complete():
             time.sleep(0.01)
         
         self.d3.stop()
@@ -151,7 +161,7 @@ class DownloaderTest(unittest.TestCase):
             
         self.d3.start()
         
-        while self.d3.get_progress() < 1.0:
+        while not self.d3.is_complete():
             time.sleep(0.01)
         
         self.d3.stop()
@@ -170,8 +180,8 @@ class DownloaderTest(unittest.TestCase):
             self.d3.stop(kill = True)
             
         self.d3.start()
-        print self.d3.get_remote_size()
-        while self.d3.get_progress() < 1.0:
+        
+        while not self.d3.is_complete():
             time.sleep(0.01)
         
         self.d3.stop()
@@ -185,13 +195,16 @@ class DownloaderTest(unittest.TestCase):
     def test_remote_size(self):
         self.assert_( self.d3.get_remote_size() == 2490041 )
         
+    def test_remote_size_no_remote_file(self):
+        self.assert_( self.d5.get_remote_size() == -1 )
+    
     def test_local_size_no_local_file(self):
         self.assert_(self.d3.get_local_size() == 0)
     
     def test_remote_url(self):
         self.assert_( self.d1.get_remote_url() == 
                       'http://elbenshira.com/d/testdl.txt' )
- 
+    
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(DownloaderTest)
     unittest.TextTestRunner(verbosity=2).run(suite)
