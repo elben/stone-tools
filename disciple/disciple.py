@@ -95,7 +95,7 @@ class Disciple:
         # while self.ds().exists():
         while True:
             # wait for arm signal
-            while not self.ds().arming():
+            while self.ds().disarmed():
                 time.sleep(Disciple.TIME_DELAY)
 
             # arm!
@@ -103,23 +103,24 @@ class Disciple:
             self.ds().cmd_armed()
 
             # wait for record signal
-            while not self.ds().recording():
+            while self.ds().not_recording():
                 self.__hdpvr.read() # to read is to arm
 
             video_file = open(self.get_video_path(), "wb")
             self.ds().cmd_recorded()
 
             # wait for stop record signal
-            while not self.ds().stopping_recording():
+            while self.ds().recording():
                 video_file.write(hdpvr.read(self.__read_size))
             
                 # force the update of file attributes
                 video_file.flush()
                 os.fsync(video_file.fileno())
 
-            # stop recording!
+            # stop recording! (and also disarm)
             self.__hdpvr.close()
             video_file.close()
+            self.ds().cmd_disarmed()
             self.ds().cmd_stopped_recording()
 
     @staticmethod
@@ -271,4 +272,5 @@ def main_old():
 
 if __name__ == "__main__":
     main()
+
 
