@@ -61,7 +61,7 @@ class Disciple:
         if mac_addr is None:
             # use a random number, yeah!
             mac_addr= str( random.uniform(100000000000, 999999999999) )
-        self.__mac_addr = mac_addr 
+        self.__mac_addr = mac_addr
 
     def ds(self):
         return self.__state
